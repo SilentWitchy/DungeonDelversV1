@@ -1,4 +1,5 @@
 #include "gfx/Renderer.h"
+#include "gfx/Texture.h"
 #include <SDL.h>
 
 Renderer::Renderer(SDL_Renderer* r) : m_r(r) {}
@@ -26,6 +27,11 @@ void Renderer::DrawRect(int x, int y, int w, int h, Color c)
     SDL_Rect rc{ x, y, w, h };
     SDL_SetRenderDrawColor(m_r, c.r, c.g, c.b, c.a);
     SDL_RenderDrawRect(m_r, &rc);
+}
+
+void Renderer::Blit(const Texture& tex, const SDL_Rect& src, const SDL_Rect& dst)
+{
+    Blit(tex.Get(), src, dst);
 }
 
 void Renderer::Blit(SDL_Texture* tex, const SDL_Rect& src, const SDL_Rect& dst)

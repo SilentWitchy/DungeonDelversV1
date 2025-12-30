@@ -4,6 +4,7 @@
 #include "gfx/Color.h"
 #include "core/Config.h"
 #include "gfx/Texture.h"
+#include "world/Noise.h"
 
 #include <cstdint>
 #include <SDL.h>
@@ -48,39 +49,6 @@ namespace
         r.FillRect(80, 120, 360, 2, Ember());
         r.FillRect(460, 200, 420, 2, Ember());
         r.FillRect(cfg::WindowWidth - 500, 160, 340, 2, Ember());
-    }
-
-    float Fade(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-    float Lerp(float a, float b, float t) { return a + t * (b - a); }
-
-    float Grad(int hash, float x, float y)
-    {
-        const int h = hash & 3;
-        const float u = (h < 2) ? x : y;
-        const float v = (h < 2) ? y : x;
-        return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
-    }
-
-    float Perlin2D(float x, float y, const std::array<int, 512>& perm)
-    {
-        const int xi = (static_cast<int>(std::floor(x)) & 255);
-        const int yi = (static_cast<int>(std::floor(y)) & 255);
-
-        const float xf = x - std::floor(x);
-        const float yf = y - std::floor(y);
-
-        const float u = Fade(xf);
-        const float v = Fade(yf);
-
-        const int aa = perm[perm[xi] + yi];
-        const int ab = perm[perm[xi] + yi + 1];
-        const int ba = perm[perm[xi + 1] + yi];
-        const int bb = perm[perm[xi + 1] + yi + 1];
-
-        const float x1 = Lerp(Grad(aa, xf, yf), Grad(ba, xf - 1.0f, yf), u);
-        const float x2 = Lerp(Grad(ab, xf, yf - 1.0f), Grad(bb, xf - 1.0f, yf - 1.0f), u);
-
-        return Lerp(x1, x2, v);
     }
 }
 
@@ -356,6 +324,9 @@ void Ui::MapGenRender(Renderer& r)
 {
     DrawCelestialBackdrop(r);
 
+    if (!m_mapPreviewReady)
+        GenerateMapPreview(r);
+
     const int boxX = 24;
     const int boxY = 24;
     const int boxW = 280;
@@ -367,4 +338,51 @@ void Ui::MapGenRender(Renderer& r)
 
     const std::string title = "MAP GENERATION";
     m_font.DrawText(r, boxX + 12, boxY + 12, title);
+
+    if (m_mapPreviewReady)
+    {
+        SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
+        SDL_Rect dst{ 340, 24, 512, 512 }; // position and size on screen
+        r.Blit(m_mapPreview, src, dst);
+    }
 }
+
+void Ui::GenerateMapPreview(Renderer& r)
+{
+    const int w = 512;
+    const int h = 512;
+
+    std::random_device rd;
+    uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
+
+    world::NoiseParams p;
+    p.scale = 128.0f;
+    p.octaves = 5;
+    p.persistence = 0.5f;
+    p.lacunarity = 2.0f;
+    p.seed = seed;
+
+    auto noise = world::PerlinFbm2D(w, h, p);
+    auto gray = world::NormalizeToU8(noise);
+    auto rgba = world::GrayToRGBA(gray); // size = w*h*4
+
+    // NOTE: this requires Texture + Renderer support below (Step 4).
+    if (!m_mapPreviewReady || m_mapPreview.Width() != w || m_mapPreview.Height() != h)
+    {
+        if (!m_mapPreview.CreateRGBAStreaming(r.Raw(), w, h))
+        {
+            SetStatusMessage("Failed to create map preview texture");
+            return;
+        }
+        m_mapPreviewReady = true;
+    }
+
+    if (!m_mapPreview.UpdateRGBA(rgba.data(), w * 4))
+    {
+        SetStatusMessage("Failed to upload map preview pixels");
+        return;
+    }
+
+    SetStatusMessage("Map preview generated");
+}
+

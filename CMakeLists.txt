@@ -13,6 +13,7 @@ add_executable(DungeonCore
     src/gfx/Font.cpp
     src/input/Input.cpp
     src/ui/Ui.cpp
+    src/world/Noise.cpp
 )
 
 target_include_directories(DungeonCore PRIVATE src)

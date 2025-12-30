@@ -1,10 +1,11 @@
-#pragma once
+#ifndef DUNGEONDELVS_GFX_TEXTURE_H
+#define DUNGEONDELVS_GFX_TEXTURE_H
+
 #include <cstdint>
 #include <string>
 
 struct SDL_Texture;
 struct SDL_Renderer;
-struct SDL_Surface;
 
 class Texture
 {
@@ -17,6 +18,11 @@ public:
 
     bool LoadBMP(SDL_Renderer* r, const std::string& path, bool colorKeyBlack);
     bool LoadFromPixels(SDL_Renderer* r, const uint32_t* pixels, int w, int h);
+
+    // Streaming (for dynamic pixel updates)
+    bool CreateRGBAStreaming(SDL_Renderer* r, int w, int h);
+    bool UpdateRGBA(const void* pixelsRGBA8888, int pitchBytes);
+
     void Destroy();
 
     SDL_Texture* Get() const { return m_tex; }
@@ -27,4 +33,7 @@ private:
     SDL_Texture* m_tex = nullptr;
     int m_w = 0;
     int m_h = 0;
+    bool m_streaming = false;
 };
+
+#endif

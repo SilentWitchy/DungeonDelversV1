@@ -14,7 +14,9 @@ void Texture::Destroy()
         SDL_DestroyTexture(m_tex);
         m_tex = nullptr;
     }
-    m_w = 0; m_h = 0;
+    m_w = 0;
+    m_h = 0;
+    m_streaming = false;
 }
 
 bool Texture::LoadBMP(SDL_Renderer* r, const std::string& path, bool colorKeyBlack)
@@ -45,8 +47,9 @@ bool Texture::LoadBMP(SDL_Renderer* r, const std::string& path, bool colorKeyBla
 
     m_w = surf->w;
     m_h = surf->h;
-    SDL_FreeSurface(surf);
+    m_streaming = false;
 
+    SDL_FreeSurface(surf);
     return true;
 }
 
@@ -74,5 +77,47 @@ bool Texture::LoadFromPixels(SDL_Renderer* r, const uint32_t* pixels, int w, int
     m_tex = tex;
     m_w = w;
     m_h = h;
+    m_streaming = false;
+    return true;
+}
+
+// -------------------------
+// NEW: Streaming support
+// -------------------------
+
+bool Texture::CreateRGBAStreaming(SDL_Renderer* r, int w, int h)
+{
+    Destroy();
+
+    SDL_Texture* tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+    if (!tex)
+    {
+        logx::Error(std::string("SDL_CreateTexture (streaming) failed: ") + SDL_GetError());
+        return false;
+    }
+
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
+
+    m_tex = tex;
+    m_w = w;
+    m_h = h;
+    m_streaming = true;
+    return true;
+}
+
+bool Texture::UpdateRGBA(const void* pixelsRGBA8888, int pitchBytes)
+{
+    if (!m_tex)
+    {
+        logx::Error("UpdateRGBA called on null texture");
+        return false;
+    }
+
+    if (SDL_UpdateTexture(m_tex, nullptr, pixelsRGBA8888, pitchBytes) != 0)
+    {
+        logx::Error(std::string("SDL_UpdateTexture failed: ") + SDL_GetError());
+        return false;
+    }
+
     return true;
 }

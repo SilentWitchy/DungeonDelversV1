@@ -1,5 +1,6 @@
 #pragma once
 #include "gfx/Color.h"
+#include "gfx/Texture.h"
 
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -18,6 +19,7 @@ public:
     void FillRect(int x, int y, int w, int h, Color c);
     void DrawRect(int x, int y, int w, int h, Color c);
 
+    void Blit(const Texture& tex, const SDL_Rect& src, const SDL_Rect& dst);
     void Blit(SDL_Texture* tex, const SDL_Rect& src, const SDL_Rect& dst);
 
 private:
