@@ -1,0 +1,212 @@
+# ==============================
+# HISTORY DATA FILE
+# ==============================
+# Lines starting with # or // are comments
+# Case-insensitive section headers
+# ==============================
+
+
+# --------------------------------------------------
+# NAMES
+# --------------------------------------------------
+[NAME]
+
+Bren | tags:human,male,firstname
+Aldric | tags:human,male,firstname
+Thane | tags:human,male,firstname
+Isolde | tags:human,female,firstname
+Elira | tags:human,female,firstname
+
+Oreth | tags:elf,male,firstname
+Sylvae | tags:elf,female,firstname
+Vaelion | tags:elf,male,firstname
+Lunara | tags:elf,female,firstname
+
+Jixa | tags:goblin,female,firstname
+Krut | tags:goblin,male,firstname
+Snikk | tags:goblin,male,firstname
+
+Hearthorne | tags:human,lastname
+Ironmere | tags:human,lastname
+Duskwell | tags:human,lastname
+Starbough | tags:elf,lastname
+Moonwhisper | tags:elf,lastname
+
+Fourdock | tags:city,human
+Ashport | tags:city,human
+Silverfen | tags:city,elf
+Deepburrow | tags:city,dwarf
+
+Ashflow | tags:river
+Grimwater | tags:river
+Starfall | tags:river
+
+Azharyx | tags:legendarycreature
+The Pale Colossus | tags:legendarycreature
+Serathiel | tags:legendarycreature
+
+Crown of Embers | tags:legendaryitem
+Blade of Quietus | tags:legendaryitem
+Heart of Stone | tags:legendaryitem
+
+Lord of the Deep | tags:legendarytitle
+Bearer of Ash | tags:legendarytitle
+
+
+# --------------------------------------------------
+# POOLS
+# --------------------------------------------------
+[POOL:CONCEPTS]
+Fire
+Ash
+Unity
+Division
+Faith
+Decay
+Order
+Chaos
+Steel
+Blood
+Silence
+Light
+Shadow
+Stone
+Dreams
+
+[POOL:DESCRIPTORS]
+Shattered
+Golden
+Forgotten
+Veiled
+Burning
+Silent
+Eternal
+Broken
+Hollow
+Crimson
+Fading
+
+[POOL:GROUPS]
+The Black Order
+The Veiled Flame
+The Iron Concord
+The Hollow Crown
+The Ashen Host
+The Radiant Synod
+The Stonebound Clans
+
+[POOL:KINGDOMS]
+Ironhide
+Valemarch
+Sunreach
+Duskmantle
+Thornwatch
+Ashkara
+Silverfall
+
+[POOL:CONTINENTS]
+Aurelion
+Kharos
+Velmora
+Draketh
+Ilyndra
+
+[POOL:OCEANS]
+The Shattered Sea
+The Ashen Deep
+The Endless Expanse
+The Veiled Waters
+
+[POOL:YOUNG_DUNGEONS]
+The Crawling Vault
+The Whispering Pit
+The Broken Cellar
+The Hungry Hollow
+
+[POOL:ELDER_DUNGEONS]
+The Worldscar
+The Abyssal Core
+The Black Reliquary
+The Eternal Maw
+
+
+# --------------------------------------------------
+# TEMPLATES — AGES
+# --------------------------------------------------
+[TEMPLATE:AGES]
+The Age of {concept}
+The {descriptor} Age
+The Age of {concept} and {concept}
+The Age of {group}
+
+
+# --------------------------------------------------
+# TEMPLATES — FOUNDINGS
+# --------------------------------------------------
+[TEMPLATE:FOUNDINGS]
+The founding of {city}
+The kingdom of {kingdom} was founded
+The rise of the city of {city}
+The coronation of the first ruler of {kingdom}
+
+
+# --------------------------------------------------
+# TEMPLATES — WARS
+# --------------------------------------------------
+[TEMPLATE:WARS]
+The War of {concept}
+The {descriptor} War
+The War between {kingdom} and {kingdom}
+The Great War of {concept} and {concept}
+The war sparked by the fall of {city}
+
+
+# --------------------------------------------------
+# TEMPLATES — BATTLES
+# --------------------------------------------------
+[TEMPLATE:BATTLES]
+The Battle of {city}
+The Battle of the {descriptor} Fields
+The Battle beneath {city}
+The last stand at {city}
+
+
+# --------------------------------------------------
+# TEMPLATES — FALLS
+# --------------------------------------------------
+[TEMPLATE:FALLS]
+The Fall of {city}
+The Fall of {kingdom}
+The Collapse of the {descriptor} Kingdom of {kingdom}
+The Fall of {city} started the collapse of the {kingdom} kingdom
+
+
+# --------------------------------------------------
+# TEMPLATES — CRUSADES
+# --------------------------------------------------
+[TEMPLATE:CRUSADES]
+The Crusade of {concept}
+The {descriptor} Crusade
+The Holy Crusade against {group}
+The Crusade to reclaim {city}
+
+
+# --------------------------------------------------
+# TEMPLATES — POLITICAL
+# --------------------------------------------------
+[TEMPLATE:POLITICAL]
+The signing of the {descriptor} Accord
+The rise of {group} to power
+The schism of the {group}
+The unification of {kingdom} under a single banner
+
+
+# --------------------------------------------------
+# TEMPLATES — CRISES
+# --------------------------------------------------
+[TEMPLATE:CRISES]
+The {descriptor} Famine
+The Plague of {concept}
+The {descriptor} Crisis
+The Collapse of Trade across {kingdom}
+The Crisis following the fall of {city}

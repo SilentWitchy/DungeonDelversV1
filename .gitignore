@@ -1,0 +1,66 @@
+# ============================
+# Build output (CMake / CLion)
+# ============================
+cmake-build-*/
+build/
+out/
+
+# CMake internals
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+Testing/
+CTestTestfile.cmake
+
+# ============================
+# CLion / JetBrains
+# ============================
+.idea/
+.idea_modules/
+*.iws
+*.iml
+
+# ============================
+# Visual Studio / MSVC
+# ============================
+.vs/
+*.sln
+*.vcxproj*
+*.pdb
+*.ilk
+*.obj
+*.idb
+*.exp
+*.lib
+*.dll
+*.exe
+*.aps
+
+# ============================
+# OS junk
+# ============================
+.DS_Store
+Thumbs.db
+
+# ============================
+# Logs & runtime output
+# ============================
+*.log
+*.tmp
+
+# ============================
+# Generated game data (keep sources!)
+# ============================
+# Ignore generated history output, but keep source data
+/assets/generated/
+/history_output/
+
+# ============================
+# Do NOT ignore these
+# ============================
+!assets/
+!assets/data/
+!assets/data/*.txt
+!src/
+!CMakeLists.txt

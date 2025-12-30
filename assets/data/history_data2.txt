@@ -1,0 +1,71 @@
+# ===================== NAMES =====================
+[NAME]
+Bren | tags:human,male,firstname
+Hearthorne | tags:human,lastname
+Fourdock | tags:city,human
+Ashflow | tags:river
+Mirewold | tags:dungeon,young
+Obsidian Maw | tags:dungeon,elder
+Eryndor | tags:continent
+The Cinder Sea | tags:ocean
+The Iron Kingdom | tags:kingdom
+Crown of Embers | tags:legendaryitem
+Lord of the Deep | tags:legendarytitle
+Azharyx | tags:legendarycreature
+
+# ===================== POOLS =====================
+[POOL:CONCEPTS]
+Ash
+Flame
+Silence
+Depths
+Faith
+Storm
+Crowns
+Chains
+Light
+Stone
+Flame
+Gates
+Thrones
+Seals
+Shadows
+Blood
+Time
+Steel
+
+[POOL:DESCRIPTORS]
+Black
+Fallen
+Sacred
+Forgotten
+Eternal
+
+[POOL:GROUPS]
+Kings
+Guilds
+Merchants
+Houses
+Orders
+Thrones
+Cities,
+Dynasties
+Empires
+
+# ===================== TEMPLATES =====================
+[TEMPLATE:AGES]
+weight=6 | The Age of {concept}
+weight=4 | The {descriptor} Age
+
+[TEMPLATE:WARS]
+weight=10 | The {descriptor} War
+weight=8  | The War of {concept}
+weight=6  | The {kingdom} War
+
+[TEMPLATE:FALLS]
+weight=8 | The Fall of {city}
+weight=6 | The Collapse of {kingdom}
+
+[TEMPLATE:FOUNDINGS]
+weight=6 | The Founding of {city}
+weight=6 | The Founding of {kingdom}
