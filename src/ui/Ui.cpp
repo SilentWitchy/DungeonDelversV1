@@ -348,117 +348,23 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     return s;
 }
 
-void Ui::GenerateMapPreview(Renderer& r)
-{
-    static std::mt19937 rng(1337u);
-    std::array<int, 256> basePerm{};
-    for (int i = 0; i < 256; ++i)
-        basePerm[i] = i;
-    std::shuffle(basePerm.begin(), basePerm.end(), rng);
-
-    std::array<int, 512> perm{};
-    for (int i = 0; i < 256; ++i)
-    {
-        perm[i] = basePerm[i];
-        perm[256 + i] = basePerm[i];
-    }
-
-    const int mapW = 320;
-    const int mapH = 200;
-    const float baseScale = 0.035f;
-
-    std::vector<uint32_t> pixels(static_cast<size_t>(mapW * mapH));
-    for (int y = 0; y < mapH; ++y)
-    {
-        for (int x = 0; x < mapW; ++x)
-        {
-            float amplitude = 1.0f;
-            float frequency = 1.0f;
-            float sum = 0.0f;
-            float norm = 0.0f;
-
-            for (int octave = 0; octave < 4; ++octave)
-            {
-                const float nx = static_cast<float>(x) * baseScale * frequency;
-                const float ny = static_cast<float>(y) * baseScale * frequency;
-                sum += Perlin2D(nx, ny, perm) * amplitude;
-                norm += amplitude;
-                amplitude *= 0.5f;
-                frequency *= 2.0f;
-            }
-
-            float n = sum / norm;      // -1..1
-            n = (n + 1.0f) * 0.5f;      // 0..1
-            n = std::clamp(n, 0.0f, 1.0f);
-
-            const auto pack = [](uint8_t r, uint8_t g, uint8_t b)
-            {
-                return 0xFF000000u | (static_cast<uint32_t>(r) << 16) |
-                                     (static_cast<uint32_t>(g) << 8)  |
-                                     static_cast<uint32_t>(b);
-            };
-
-            uint32_t color = 0;
-            if (n < 0.35f)
-            {
-                color = pack(26, 52, 112); // deep water
-            }
-            else if (n < 0.5f)
-            {
-                color = pack(62, 101, 146); // shallows
-            }
-            else if (n < 0.65f)
-            {
-                color = pack(54, 120, 78); // lowland
-            }
-            else if (n < 0.8f)
-            {
-                color = pack(94, 142, 88); // highland
-            }
-            else
-            {
-                const uint8_t m = static_cast<uint8_t>(200 + (n - 0.8f) * 255 * 0.5f);
-                color = pack(m, m, m); // peaks
-            }
-
-            pixels[static_cast<size_t>(y * mapW + x)] = color;
-        }
-    }
-
-    m_mapPreviewReady = m_mapPreview.LoadFromPixels(r.Raw(), pixels.data(), mapW, mapH);
-}
-
 void Ui::MapGenTick()
 {
 }
 
 void Ui::MapGenRender(Renderer& r)
 {
-    if (!m_mapPreviewReady)
-        GenerateMapPreview(r);
+    DrawCelestialBackdrop(r);
 
-    if (m_mapPreviewReady)
-    {
-        SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        SDL_Rect dst{ 0, 0, cfg::WindowWidth, cfg::WindowHeight };
-        r.Blit(m_mapPreview.Get(), src, dst);
-    }
-    else
-    {
-        DrawCelestialBackdrop(r);
-    }
-
-    const int pad = 16;
     const int boxX = 24;
     const int boxY = 24;
-    const int titleH = m_font.GlyphH();
-    const int boxW = 320 + pad * 2;
-    const int boxH = 200 + pad * 2 + titleH + 6;
+    const int boxW = 280;
+    const int boxH = 180;
 
     r.FillRect(boxX, boxY, boxW, boxH, Color::RGB(14, 12, 22));
     r.DrawRect(boxX, boxY, boxW, boxH, BurntGold());
     r.DrawRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8, Ember());
 
     const std::string title = "MAP GENERATION";
-    m_font.DrawText(r, boxX + pad, boxY + pad - 2, title);
+    m_font.DrawText(r, boxX + 12, boxY + 12, title);
 }

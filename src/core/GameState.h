@@ -5,5 +5,5 @@ enum class GameState
     MainMenu,
     Settings,
     WorldGen,
-    MapGeneration
+    MapGenSelection
 };
