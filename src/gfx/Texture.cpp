@@ -49,3 +49,30 @@ bool Texture::LoadBMP(SDL_Renderer* r, const std::string& path, bool colorKeyBla
 
     return true;
 }
+
+bool Texture::LoadFromPixels(SDL_Renderer* r, const uint32_t* pixels, int w, int h)
+{
+    Destroy();
+
+    SDL_Texture* tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, w, h);
+    if (!tex)
+    {
+        logx::Error(std::string("SDL_CreateTexture failed: ") + SDL_GetError());
+        return false;
+    }
+
+    const int pitch = w * static_cast<int>(sizeof(uint32_t));
+    if (SDL_UpdateTexture(tex, nullptr, pixels, pitch) != 0)
+    {
+        logx::Error(std::string("SDL_UpdateTexture failed: ") + SDL_GetError());
+        SDL_DestroyTexture(tex);
+        return false;
+    }
+
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
+
+    m_tex = tex;
+    m_w = w;
+    m_h = h;
+    return true;
+}

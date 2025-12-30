@@ -3,9 +3,16 @@
 #include "gfx/Renderer.h"
 #include "gfx/Color.h"
 #include "core/Config.h"
+#include "gfx/Texture.h"
 
 #include <cstdint>
+#include <SDL.h>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <random>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -41,6 +48,39 @@ namespace
         r.FillRect(80, 120, 360, 2, Ember());
         r.FillRect(460, 200, 420, 2, Ember());
         r.FillRect(cfg::WindowWidth - 500, 160, 340, 2, Ember());
+    }
+
+    float Fade(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    float Lerp(float a, float b, float t) { return a + t * (b - a); }
+
+    float Grad(int hash, float x, float y)
+    {
+        const int h = hash & 3;
+        const float u = (h < 2) ? x : y;
+        const float v = (h < 2) ? y : x;
+        return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+    }
+
+    float Perlin2D(float x, float y, const std::array<int, 512>& perm)
+    {
+        const int xi = (static_cast<int>(std::floor(x)) & 255);
+        const int yi = (static_cast<int>(std::floor(y)) & 255);
+
+        const float xf = x - std::floor(x);
+        const float yf = y - std::floor(y);
+
+        const float u = Fade(xf);
+        const float v = Fade(yf);
+
+        const int aa = perm[perm[xi] + yi];
+        const int ab = perm[perm[xi] + yi + 1];
+        const int ba = perm[perm[xi + 1] + yi];
+        const int bb = perm[perm[xi + 1] + yi + 1];
+
+        const float x1 = Lerp(Grad(aa, xf, yf), Grad(ba, xf - 1.0f, yf), u);
+        const float x2 = Lerp(Grad(ab, xf, yf - 1.0f), Grad(bb, xf - 1.0f, yf - 1.0f), u);
+
+        return Lerp(x1, x2, v);
     }
 }
 
@@ -306,4 +346,124 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     s.resourceAbundance = m_wgChoice[5];
     s.monstrousPopulation = m_wgChoice[6];
     return s;
+}
+
+void Ui::GenerateMapPreview(Renderer& r)
+{
+    static std::mt19937 rng(1337u);
+    std::array<int, 256> basePerm{};
+    for (int i = 0; i < 256; ++i)
+        basePerm[i] = i;
+    std::shuffle(basePerm.begin(), basePerm.end(), rng);
+
+    std::array<int, 512> perm{};
+    for (int i = 0; i < 256; ++i)
+    {
+        perm[i] = basePerm[i];
+        perm[256 + i] = basePerm[i];
+    }
+
+    const int mapW = 320;
+    const int mapH = 200;
+    const float baseScale = 0.035f;
+
+    std::vector<uint32_t> pixels(static_cast<size_t>(mapW * mapH));
+    for (int y = 0; y < mapH; ++y)
+    {
+        for (int x = 0; x < mapW; ++x)
+        {
+            float amplitude = 1.0f;
+            float frequency = 1.0f;
+            float sum = 0.0f;
+            float norm = 0.0f;
+
+            for (int octave = 0; octave < 4; ++octave)
+            {
+                const float nx = static_cast<float>(x) * baseScale * frequency;
+                const float ny = static_cast<float>(y) * baseScale * frequency;
+                sum += Perlin2D(nx, ny, perm) * amplitude;
+                norm += amplitude;
+                amplitude *= 0.5f;
+                frequency *= 2.0f;
+            }
+
+            float n = sum / norm;      // -1..1
+            n = (n + 1.0f) * 0.5f;      // 0..1
+            n = std::clamp(n, 0.0f, 1.0f);
+
+            const auto pack = [](uint8_t r, uint8_t g, uint8_t b)
+            {
+                return 0xFF000000u | (static_cast<uint32_t>(r) << 16) |
+                                     (static_cast<uint32_t>(g) << 8)  |
+                                     static_cast<uint32_t>(b);
+            };
+
+            uint32_t color = 0;
+            if (n < 0.35f)
+            {
+                color = pack(26, 52, 112); // deep water
+            }
+            else if (n < 0.5f)
+            {
+                color = pack(62, 101, 146); // shallows
+            }
+            else if (n < 0.65f)
+            {
+                color = pack(54, 120, 78); // lowland
+            }
+            else if (n < 0.8f)
+            {
+                color = pack(94, 142, 88); // highland
+            }
+            else
+            {
+                const uint8_t m = static_cast<uint8_t>(200 + (n - 0.8f) * 255 * 0.5f);
+                color = pack(m, m, m); // peaks
+            }
+
+            pixels[static_cast<size_t>(y * mapW + x)] = color;
+        }
+    }
+
+    m_mapPreviewReady = m_mapPreview.LoadFromPixels(r.Raw(), pixels.data(), mapW, mapH);
+}
+
+void Ui::MapGenTick()
+{
+}
+
+void Ui::MapGenRender(Renderer& r)
+{
+    DrawCelestialBackdrop(r);
+
+    if (!m_mapPreviewReady)
+        GenerateMapPreview(r);
+
+    const int pad = 16;
+    const int boxX = 24;
+    const int boxY = 24;
+    const int mapW = m_mapPreview.Width();
+    const int mapH = m_mapPreview.Height();
+    const int titleH = m_font.GlyphH();
+    const int boxW = mapW + pad * 2;
+    const int boxH = mapH + pad * 2 + titleH + 6;
+
+    r.FillRect(boxX, boxY, boxW, boxH, Color::RGB(14, 12, 22));
+    r.DrawRect(boxX, boxY, boxW, boxH, BurntGold());
+    r.DrawRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8, Ember());
+
+    const std::string title = "MAP GENERATION";
+    m_font.DrawText(r, boxX + pad, boxY + pad - 2, title);
+
+    if (m_mapPreviewReady)
+    {
+        SDL_Rect src{ 0, 0, mapW, mapH };
+        SDL_Rect dst{ boxX + pad, boxY + pad + titleH + 4, mapW, mapH };
+        r.Blit(m_mapPreview.Get(), src, dst);
+    }
+    else
+    {
+        const std::string failure = "Failed to build preview";
+        m_font.DrawText(r, boxX + pad, boxY + pad + titleH + 8, failure);
+    }
 }
