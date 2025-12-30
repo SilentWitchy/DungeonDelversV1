@@ -116,6 +116,9 @@ int App::Run()
         if (m_input->PressedOnce(SDLK_q))
             m_running = false;
 
+        if (m_state == GameState::MainMenu && m_input->PressedOnce(SDLK_ESCAPE))
+            m_running = false;
+
         // State-specific input
         if (m_state == GameState::MainMenu)
         {
@@ -139,8 +142,28 @@ int App::Run()
                 }
                 else if (sel == 1)
                 {
+                    m_state = GameState::Settings;
+                }
+                else if (sel == 2)
+                {
                     m_running = false;
                 }
+            }
+        }
+
+        else if (m_state == GameState::Settings)
+        {
+            const bool up = m_input->PressedOnce(SDLK_UP) || m_input->PressedOnce(SDLK_w);
+            const bool down = m_input->PressedOnce(SDLK_DOWN) || m_input->PressedOnce(SDLK_s);
+            const bool select = m_input->PressedOnce(SDLK_RETURN) || m_input->PressedOnce(SDLK_KP_ENTER);
+            const bool back = m_input->PressedOnce(SDLK_ESCAPE);
+
+            m_ui->SettingsTick(up, down, select, back);
+
+            if (m_ui->SettingsBackRequested())
+            {
+                m_ui->ClearSettingsBackRequest();
+                m_state = GameState::MainMenu;
             }
         }
 
@@ -186,6 +209,10 @@ void App::Render()
     if (m_state == GameState::MainMenu)
     {
         m_ui->MainMenuRender(*m_renderer);
+    }
+    else if (m_state == GameState::Settings)
+    {
+        m_ui->SettingsRender(*m_renderer);
     }
     else if (m_state == GameState::WorldGen)
     {

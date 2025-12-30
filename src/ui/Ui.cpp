@@ -44,7 +44,10 @@ namespace
     }
 }
 
-Ui::Ui(Font& font) : m_font(font) {}
+Ui::Ui(Font& font) : m_font(font)
+{
+    m_settingsDetail = "Refine how your realm looks, sounds, and controls.";
+}
 
 void Ui::SetStatusMessage(const std::string& text)
 {
@@ -53,10 +56,12 @@ void Ui::SetStatusMessage(const std::string& text)
 
 void Ui::MainMenuTick(bool upPressed, bool downPressed, bool selectPressed)
 {
+    static const int MENU_COUNT = 3;
+
     if (upPressed)
-        m_mainMenuSelection = (m_mainMenuSelection + 1) % 2;
+        m_mainMenuSelection = (m_mainMenuSelection + MENU_COUNT - 1) % MENU_COUNT;
     if (downPressed)
-        m_mainMenuSelection = (m_mainMenuSelection + 1) % 2;
+        m_mainMenuSelection = (m_mainMenuSelection + 1) % MENU_COUNT;
 
     if (selectPressed)
         m_mainMenuActivated = true;
@@ -105,7 +110,8 @@ void Ui::MainMenuRender(Renderer& r)
     };
 
     drawItem(0, buttonY, "CREATE NEW WORLD");
-    drawItem(1, buttonY + lineH, "QUIT");
+    drawItem(1, buttonY + lineH, "SETTINGS");
+    drawItem(2, buttonY + lineH * 2, "QUIT");
 
     if (!m_statusMessage.empty())
     {
@@ -117,6 +123,93 @@ void Ui::MainMenuRender(Renderer& r)
 void Ui::ClearMainMenuActivated()
 {
     m_mainMenuActivated = false;
+}
+
+void Ui::SettingsTick(bool up, bool down, bool select, bool back)
+{
+    static const int SETTINGS_COUNT = 4;
+    static const char* SETTINGS_DESCRIPTIONS[SETTINGS_COUNT] = {
+        "Tune resolution, scaling, and visual effects.",
+        "Balance volume, ambience, and alerts.",
+        "Adjust difficulty, automation, and pacing.",
+        "Remap actions to your preferred keys."
+    };
+
+    if (up)
+        m_settingsSelection = (m_settingsSelection + SETTINGS_COUNT - 1) % SETTINGS_COUNT;
+    if (down)
+        m_settingsSelection = (m_settingsSelection + 1) % SETTINGS_COUNT;
+
+    // Update descriptive text whenever the selection changes or is confirmed
+    m_settingsDetail = SETTINGS_DESCRIPTIONS[m_settingsSelection];
+
+    if (select)
+        m_settingsDetail = SETTINGS_DESCRIPTIONS[m_settingsSelection];
+
+    if (back)
+        m_settingsBackRequested = true;
+}
+
+void Ui::SettingsRender(Renderer& r)
+{
+    DrawCelestialBackdrop(r);
+
+    const int panelW = 920;
+    const int panelH = 540;
+    const int panelX = (cfg::WindowWidth - panelW) / 2;
+    const int panelY = 70;
+
+    r.FillRect(panelX, panelY, panelW, panelH, Color::RGB(14, 12, 22));
+    r.DrawRect(panelX, panelY, panelW, panelH, BurntGold());
+    r.DrawRect(panelX + 6, panelY + 6, panelW - 12, panelH - 12, Ember());
+
+    const std::string title = "SETTINGS";
+    int titleX = (cfg::WindowWidth / 2) - (int)title.size() * m_font.GlyphW() / 2;
+    m_font.DrawText(r, titleX, panelY + 28, title);
+
+    static const char* SETTINGS_LABELS[4] = {
+        "VIDEO",
+        "AUDIO",
+        "GAME",
+        "KEYBINDINGS"
+    };
+
+    int y = panelY + 100;
+    const int line = m_font.GlyphH() * 2 + 6;
+    for (int i = 0; i < 4; ++i)
+    {
+        const bool selected = (i == m_settingsSelection);
+
+        const int rowX = panelX + 40;
+        const int rowW = panelW - 80;
+        const int rowH = m_font.GlyphH() + 12;
+        const int rowY = y - 6;
+
+        r.FillRect(rowX, rowY, rowW, rowH, selected ? Color::RGB(22, 18, 26) : Color::RGB(16, 12, 20));
+        r.DrawRect(rowX, rowY, rowW, rowH, selected ? BurntGold() : Ember());
+
+        std::string left = selected ? "> " : "  ";
+        left += SETTINGS_LABELS[i];
+
+        m_font.DrawText(r, rowX + 18, y, left);
+        y += line;
+    }
+
+    if (m_settingsDetail.empty())
+        m_settingsDetail = "Refine how your realm looks, sounds, and controls.";
+
+    const int detailY = panelY + panelH - 90;
+    int detailX = (cfg::WindowWidth / 2) - (int)m_settingsDetail.size() * m_font.GlyphW() / 2;
+    m_font.DrawText(r, detailX, detailY, m_settingsDetail);
+
+    const std::string footer = "Press ESC to return to the main menu.";
+    int footerX = (cfg::WindowWidth / 2) - (int)footer.size() * m_font.GlyphW() / 2;
+    m_font.DrawText(r, footerX, detailY + m_font.GlyphH() + 10, footer);
+}
+
+void Ui::ClearSettingsBackRequest()
+{
+    m_settingsBackRequested = false;
 }
 
 // ====================== WORLD GENERATION MENU ======================
