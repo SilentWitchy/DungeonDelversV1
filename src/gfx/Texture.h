@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 
 struct SDL_Texture;
@@ -15,6 +16,7 @@ public:
     Texture& operator=(const Texture&) = delete;
 
     bool LoadBMP(SDL_Renderer* r, const std::string& path, bool colorKeyBlack);
+    bool LoadFromPixels(SDL_Renderer* r, const uint32_t* pixels, int w, int h);
     void Destroy();
 
     SDL_Texture* Get() const { return m_tex; }
