@@ -189,11 +189,11 @@ int App::Run()
             {
                 m_pendingSettings = m_ui->GetWorldGenSettings();
                 m_ui->ClearWorldGenRequests();
-                m_state = GameState::MapGeneration;
+                m_state = GameState::MapGenSelection;
             }
         }
 
-        else if (m_state == GameState::MapGeneration)
+        else if (m_state == GameState::MapGenSelection)
         {
             m_ui->MapGenTick();
         }
@@ -220,7 +220,7 @@ void App::Render()
     {
         m_ui->WorldGenRender(*m_renderer);
     }
-    else if (m_state == GameState::MapGeneration)
+    else if (m_state == GameState::MapGenSelection)
     {
         m_ui->MapGenRender(*m_renderer);
     }
