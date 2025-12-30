@@ -25,6 +25,9 @@ public:
         bool selectPressed, bool backPressed);
     void WorldGenRender(Renderer& r);
 
+    void MapGenTick();
+    void MapGenRender(Renderer& r);
+
     bool WorldGenStartRequested() const { return m_worldGenStartRequested; }
     bool WorldGenBackRequested() const { return m_worldGenBackRequested; }
     void ClearWorldGenRequests();
