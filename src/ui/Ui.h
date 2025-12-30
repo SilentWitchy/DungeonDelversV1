@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "world/WorldGenSettings.h"
+#include "gfx/Texture.h"
 
 class Font;
 class Renderer;
@@ -54,4 +55,8 @@ private:
     bool m_worldGenBackRequested = false;
 
     std::string m_statusMessage;
+
+    void GenerateMapPreview(Renderer& r);
+    Texture m_mapPreview;
+    bool m_mapPreviewReady = false;
 };

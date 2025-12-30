@@ -3,9 +3,16 @@
 #include "gfx/Renderer.h"
 #include "gfx/Color.h"
 #include "core/Config.h"
+#include "gfx/Texture.h"
 
 #include <cstdint>
+#include <SDL.h>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <random>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -41,6 +48,39 @@ namespace
         r.FillRect(80, 120, 360, 2, Ember());
         r.FillRect(460, 200, 420, 2, Ember());
         r.FillRect(cfg::WindowWidth - 500, 160, 340, 2, Ember());
+    }
+
+    float Fade(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    float Lerp(float a, float b, float t) { return a + t * (b - a); }
+
+    float Grad(int hash, float x, float y)
+    {
+        const int h = hash & 3;
+        const float u = (h < 2) ? x : y;
+        const float v = (h < 2) ? y : x;
+        return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+    }
+
+    float Perlin2D(float x, float y, const std::array<int, 512>& perm)
+    {
+        const int xi = (static_cast<int>(std::floor(x)) & 255);
+        const int yi = (static_cast<int>(std::floor(y)) & 255);
+
+        const float xf = x - std::floor(x);
+        const float yf = y - std::floor(y);
+
+        const float u = Fade(xf);
+        const float v = Fade(yf);
+
+        const int aa = perm[perm[xi] + yi];
+        const int ab = perm[perm[xi] + yi + 1];
+        const int ba = perm[perm[xi + 1] + yi];
+        const int bb = perm[perm[xi + 1] + yi + 1];
+
+        const float x1 = Lerp(Grad(aa, xf, yf), Grad(ba, xf - 1.0f, yf), u);
+        const float x2 = Lerp(Grad(ab, xf, yf - 1.0f), Grad(bb, xf - 1.0f, yf - 1.0f), u);
+
+        return Lerp(x1, x2, v);
     }
 }
 
