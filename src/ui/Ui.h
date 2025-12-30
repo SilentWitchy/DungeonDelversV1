@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "world/WorldGenSettings.h"
+#include "gfx/Texture.h"
 
 class Font;
 class Renderer;
@@ -24,6 +25,9 @@ public:
     void WorldGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed,
         bool selectPressed, bool backPressed);
     void WorldGenRender(Renderer& r);
+
+    void MapGenTick();
+    void MapGenRender(Renderer& r);
 
     bool WorldGenStartRequested() const { return m_worldGenStartRequested; }
     bool WorldGenBackRequested() const { return m_worldGenBackRequested; }
@@ -51,4 +55,8 @@ private:
     bool m_worldGenBackRequested = false;
 
     std::string m_statusMessage;
+
+    void GenerateMapPreview(Renderer& r);
+    Texture m_mapPreview;
+    bool m_mapPreviewReady = false;
 };
