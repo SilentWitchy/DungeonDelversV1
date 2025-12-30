@@ -307,3 +307,24 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     s.monstrousPopulation = m_wgChoice[6];
     return s;
 }
+
+void Ui::MapGenTick()
+{
+}
+
+void Ui::MapGenRender(Renderer& r)
+{
+    DrawCelestialBackdrop(r);
+
+    const int boxX = 24;
+    const int boxY = 24;
+    const int boxW = 280;
+    const int boxH = 180;
+
+    r.FillRect(boxX, boxY, boxW, boxH, Color::RGB(14, 12, 22));
+    r.DrawRect(boxX, boxY, boxW, boxH, BurntGold());
+    r.DrawRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8, Ember());
+
+    const std::string title = "MAP GENERATION";
+    m_font.DrawText(r, boxX + 12, boxY + 12, title);
+}

@@ -189,11 +189,13 @@ int App::Run()
             {
                 m_pendingSettings = m_ui->GetWorldGenSettings();
                 m_ui->ClearWorldGenRequests();
-
-                m_statusMessage = "World settings saved under the current stars.";
-                m_ui->SetStatusMessage(m_statusMessage);
-                m_state = GameState::MainMenu;
+                m_state = GameState::MapGenSelection;
             }
+        }
+
+        else if (m_state == GameState::MapGenSelection)
+        {
+            m_ui->MapGenTick();
         }
 
         Render();
@@ -217,6 +219,10 @@ void App::Render()
     else if (m_state == GameState::WorldGen)
     {
         m_ui->WorldGenRender(*m_renderer);
+    }
+    else if (m_state == GameState::MapGenSelection)
+    {
+        m_ui->MapGenRender(*m_renderer);
     }
 
     m_renderer->Present();

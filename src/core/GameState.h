@@ -4,5 +4,6 @@ enum class GameState
 {
     MainMenu,
     Settings,
-    WorldGen
+    WorldGen,
+    MapGenSelection
 };
