@@ -244,6 +244,8 @@ static const char* WG_VALUES[7][5] = {
 
 void Ui::WorldGenTick(bool up, bool down, bool left, bool right, bool select, bool back)
 {
+    const int previousWorldSize = m_wgChoice[0];
+
     if (up)   m_wgRow = (m_wgRow + 6) % 7;
     if (down) m_wgRow = (m_wgRow + 1) % 7;
 
@@ -251,6 +253,9 @@ void Ui::WorldGenTick(bool up, bool down, bool left, bool right, bool select, bo
         m_wgChoice[m_wgRow] = (m_wgChoice[m_wgRow] + 4) % 5;
     if (right)
         m_wgChoice[m_wgRow] = (m_wgChoice[m_wgRow] + 1) % 5;
+
+    if (m_wgChoice[0] != previousWorldSize)
+        m_mapPreviewReady = false;
 
     if (select) m_worldGenStartRequested = true;
     if (back)   m_worldGenBackRequested = true;
@@ -324,6 +329,9 @@ void Ui::MapGenRender(Renderer& r)
 {
     DrawCelestialBackdrop(r);
 
+    if (m_lastMapPreviewWorldSize != m_wgChoice[0])
+        m_mapPreviewReady = false;
+
     if (!m_mapPreviewReady)
         GenerateMapPreview(r);
 
@@ -349,8 +357,9 @@ void Ui::MapGenRender(Renderer& r)
 
 void Ui::GenerateMapPreview(Renderer& r)
 {
-    const int w = 512;
-    const int h = 512;
+    static const int WORLD_SIZE_TO_RESOLUTION[5] = { 256, 384, 512, 640, 768 };
+    const int w = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
+    const int h = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
 
     std::random_device rd;
     uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
@@ -383,6 +392,7 @@ void Ui::GenerateMapPreview(Renderer& r)
         return;
     }
 
+    m_lastMapPreviewWorldSize = m_wgChoice[0];
     SetStatusMessage("Map preview generated");
 }
 

@@ -9,6 +9,15 @@ A minimal-dependency foundation for a Dwarf Fortress–style game where the play
 - ESC: toggle menu
 - Q: quit
 
+## World generation
+- The world generation menu exposes sliders such as **World Size**, **History Length**, and more.
+- The map preview uses Perlin fbm noise sized to your selected **World Size**:
+  - Tiny → 256x256
+  - Small → 384x384
+  - Middling → 512x512
+  - Large → 640x640
+  - Vast → 768x768
+
 ## Build (CMake)
 Typical:
 - Configure with your IDE (CLion) or command line
