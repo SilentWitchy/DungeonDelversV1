@@ -59,4 +59,5 @@ private:
     void GenerateMapPreview(Renderer& r);
     Texture m_mapPreview;
     bool m_mapPreviewReady = false;
+    int m_lastMapPreviewWorldSize = -1;
 };
