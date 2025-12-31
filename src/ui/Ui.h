@@ -29,14 +29,7 @@ public:
         bool selectPressed, bool backPressed);
     void WorldGenRender(Renderer& r);
 
-    void MapGenTick(
-        bool upPressed,
-        bool downPressed,
-        bool leftPressed,
-        bool rightPressed,
-        bool confirmPressed,
-        bool backPressed,
-        int  wheelDelta);
+    void MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, bool confirmPressed, bool backPressed, int wheelDelta);
     void MapGenRender(Renderer& r);
     bool MapSelectionComplete() const { return m_spawnConfirmed; }
     bool MapGenBackRequested() const { return m_mapGenBackRequested; }
