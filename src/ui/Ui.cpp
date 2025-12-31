@@ -375,14 +375,6 @@ void Ui::MapGenRender(Renderer& r)
     r.DrawRect(boxX, boxY, boxW, boxH, BurntGold());
     r.DrawRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8, Ember());
 
-    const std::string title = "MAP GENERATION";
-    m_font.DrawText(r, boxX + 12, boxY + 12, title);
-
-    const std::string panHint = "WASD / Arrows: pan preview";
-    const std::string zoomHint = "Mouse wheel: zoom";
-    m_font.DrawText(r, boxX + 12, boxY + 40, panHint);
-    m_font.DrawText(r, boxX + 12, boxY + 68, zoomHint);
-
     if (m_mapPreviewReady)
     {
         SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
