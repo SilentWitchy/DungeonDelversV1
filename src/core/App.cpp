@@ -200,7 +200,7 @@ int App::Run()
             const bool left = m_input->Down(SDLK_a) || m_input->Down(SDLK_LEFT);
             const bool right = m_input->Down(SDLK_d) || m_input->Down(SDLK_RIGHT);
 
-            m_ui->MapGenTick(up, down, left, right, m_input->WheelY());
+            m_ui->MapGenTick(up, down, left, right);
         }
 
         Render();

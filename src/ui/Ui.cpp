@@ -321,11 +321,10 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     return s;
 }
 
-void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta)
+void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed)
 {
-    const float moveStep = 48.0f / std::max(1.0f, m_mapPreviewZoom);
+    const float moveStep = 48.0f;
     bool moved = false;
-    bool zoomed = false;
 
     if (leftPressed)
     {
@@ -348,19 +347,7 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
         moved = true;
     }
 
-    if (wheelDelta != 0)
-    {
-        const float zoomStep = 1.12f;
-        float factor = (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
-
-        for (int i = 1; i < std::abs(wheelDelta); ++i)
-            factor *= (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
-
-        m_mapPreviewZoom = std::clamp(m_mapPreviewZoom * factor, 0.25f, 6.0f);
-        zoomed = true;
-    }
-
-    if (moved || zoomed)
+    if (moved)
         m_mapPreviewReady = false;
 }
 
@@ -374,7 +361,6 @@ void Ui::MapGenRender(Renderer& r)
         m_hasMapPreviewSeed = false;
         m_mapPreviewOffsetX = 0.0f;
         m_mapPreviewOffsetY = 0.0f;
-        m_mapPreviewZoom = 1.0f;
     }
 
     if (!m_mapPreviewReady)
@@ -421,7 +407,7 @@ void Ui::GenerateMapPreview(Renderer& r)
     }
 
     world::NoiseParams p;
-    p.scale = (static_cast<float>(w) * 0.9f) / std::max(0.0001f, m_mapPreviewZoom);
+    p.scale = static_cast<float>(w) * 0.9f;
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;

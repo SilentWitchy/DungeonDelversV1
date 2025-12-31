@@ -26,7 +26,7 @@ public:
         bool selectPressed, bool backPressed);
     void WorldGenRender(Renderer& r);
 
-    void MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta);
+    void MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed);
     void MapGenRender(Renderer& r);
 
     bool WorldGenStartRequested() const { return m_worldGenStartRequested; }
@@ -64,5 +64,4 @@ private:
     bool m_hasMapPreviewSeed = false;
     float m_mapPreviewOffsetX = 0.0f;
     float m_mapPreviewOffsetY = 0.0f;
-    float m_mapPreviewZoom = 1.0f;
 };
