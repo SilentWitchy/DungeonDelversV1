@@ -404,7 +404,7 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
 
 void Ui::MapGenRender(Renderer& r)
 {
-    DrawCelestialBackdrop(r);
+    r.FillRect(0, 0, cfg::WindowWidth, cfg::WindowHeight, Color::RGB(0, 0, 0));
 
     if (m_lastMapPreviewWorldSize != m_wgChoice[0])
     {
@@ -422,16 +422,10 @@ void Ui::MapGenRender(Renderer& r)
     const int previewX = (cfg::WindowWidth - previewSize) / 2;
     const int previewY = (cfg::WindowHeight - previewSize) / 2;
 
-    // Soft shadow and frame to give the preview a focal feel
-    r.FillRect(previewX + 14, previewY + 18, previewSize, previewSize, Color::RGB(6, 6, 12));
-    r.FillRect(previewX, previewY, previewSize, previewSize, Color::RGB(16, 12, 20));
-    r.DrawRect(previewX, previewY, previewSize, previewSize, Ember());
-    r.DrawRect(previewX + 8, previewY + 8, previewSize - 16, previewSize - 16, BurntGold());
-
     if (m_mapPreviewReady)
     {
         SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        SDL_Rect dst{ previewX + 16, previewY + 16, previewSize - 32, previewSize - 32 };
+        SDL_Rect dst{ previewX, previewY, previewSize, previewSize };
         r.Blit(m_mapPreview, src, dst);
     }
 
