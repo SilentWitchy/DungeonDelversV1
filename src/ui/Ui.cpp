@@ -454,28 +454,7 @@ void Ui::BuildRegionBiomeSummaries()
 
 void Ui::GenerateLocalTerrain(int regionX, int regionY)
 {
-    const int tilesPerSide = LOCAL_BLOCKS_PER_REGION * TERRAIN_TILES_PER_BLOCK;
-
-    world::NoiseParams params;
-    params.scale = 96.0f;
-    params.octaves = 6;
-    params.persistence = 0.5f;
-    params.lacunarity = 2.0f;
-    params.seed = m_mapPreviewSeed ^ static_cast<uint32_t>(regionX * 73856093) ^ static_cast<uint32_t>(regionY * 19349663);
-    params.offsetX = 0.0f;
-    params.offsetY = 0.0f;
-
-    auto terrainNoise = world::NormalizeToU8(world::PerlinFbm2D(tilesPerSide, tilesPerSide, params));
-
-    m_localTerrainBiomes.assign(tilesPerSide * tilesPerSide, 0);
-    for (int i = 0; i < tilesPerSide * tilesPerSide; ++i)
-        m_localTerrainBiomes[i] = SampleBiome(terrainNoise[i]);
-
-    m_localSelectionBlockX = 0;
-    m_localSelectionBlockY = 0;
-    m_mapViewStage = MapViewStage::Local;
-    m_spawnConfirmed = false;
-}
+    r.FillRect(0, 0, cfg::WindowWidth, cfg::WindowHeight, Color::RGB(0, 0, 0));
 
 void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, bool confirmPressed, bool backPressed, int /*wheelDelta*/)
 {
@@ -496,13 +475,11 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
         if (leftPressed)  m_selectedRegionX = std::max(0, m_selectedRegionX - 1);
         if (rightPressed) m_selectedRegionX = std::min(RegionResolution() - 1, m_selectedRegionX + 1);
 
-        if (confirmPressed)
-        {
-            GenerateLocalTerrain(m_selectedRegionX, m_selectedRegionY);
-        }
-
-        if (backPressed)
-            m_mapGenBackRequested = true;
+    if (m_mapPreviewReady)
+    {
+        SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
+        SDL_Rect dst{ previewX, previewY, previewSize, previewSize };
+        r.Blit(m_mapPreview, src, dst);
     }
     else if (m_mapViewStage == MapViewStage::Local)
     {
@@ -525,11 +502,27 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
 
 void Ui::MapGenRender(Renderer& r)
 {
-    r.FillRect(0, 0, cfg::WindowWidth, cfg::WindowHeight, Color::RGB(0, 0, 0));
+    const int w = cfg::WindowWidth;
+    const int h = cfg::WindowHeight;
+    const int resolution = WorldResolution(m_wgChoice[0]);
 
     BuildRegionBiomeSummaries();
 
-    if (m_mapViewStage == MapViewStage::Region)
+    world::NoiseParams p;
+    p.scale = static_cast<float>(resolution) * 2.0f;
+    p.octaves = 5;
+    p.persistence = 0.5f;
+    p.lacunarity = 2.0f;
+    p.seed = m_mapPreviewSeed;
+    p.offsetX = m_mapPreviewOffsetX;
+    p.offsetY = m_mapPreviewOffsetY;
+
+    auto noise = world::PerlinFbm2D(w, h, p);
+    auto gray = world::NormalizeToU8(noise);
+    auto rgba = world::GrayToRGBA(gray); // size = w*h*4
+
+    // NOTE: this requires Texture + Renderer support below (Step 4).
+    if (!m_mapPreviewReady || m_mapPreview.Width() != w || m_mapPreview.Height() != h)
     {
         const int res = RegionResolution();
         const int availableW = cfg::WindowWidth - 120;
