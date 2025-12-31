@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -19,22 +20,6 @@ namespace
     Color BurntGold() { return Color::RGB(196, 146, 64); }
     Color Ember()     { return Color::RGB(122, 82, 44); }
     Color DeepNight() { return Color::RGB(8, 10, 18); }
-
-    const int WORLD_SIZE_TO_RESOLUTION[5] = { 256, 384, 512, 640, 768 };
-
-    uint32_t PreviewSeed(const int wgChoice[7])
-    {
-        uint32_t seed = 0xA341316C; // LCG-style mix to keep preview deterministic per setting
-        for (int i = 0; i < 7; ++i)
-            seed = seed * 1664525u + 1013904223u + static_cast<uint32_t>(wgChoice[i] + 1);
-        return seed;
-    }
-
-    int WorldResolution(int worldSizeIndex)
-    {
-        const int idx = std::clamp(worldSizeIndex, 0, 4);
-        return WORLD_SIZE_TO_RESOLUTION[idx];
-    }
 
     void DrawCelestialBackdrop(Renderer& r)
     {
@@ -70,7 +55,6 @@ namespace
 Ui::Ui(Font& font) : m_font(font)
 {
     m_settingsDetail = "Refine how your realm looks, sounds, and controls.";
-    m_mapPreviewSeed = PreviewSeed(m_wgChoice);
 }
 
 void Ui::SetStatusMessage(const std::string& text)
@@ -261,35 +245,17 @@ static const char* WG_VALUES[7][5] = {
 void Ui::WorldGenTick(bool up, bool down, bool left, bool right, bool select, bool back)
 {
     const int previousWorldSize = m_wgChoice[0];
-    bool settingsChanged = false;
 
     if (up)   m_wgRow = (m_wgRow + 6) % 7;
     if (down) m_wgRow = (m_wgRow + 1) % 7;
 
     if (left)
-    {
         m_wgChoice[m_wgRow] = (m_wgChoice[m_wgRow] + 4) % 5;
-        settingsChanged = true;
-    }
     if (right)
-    {
         m_wgChoice[m_wgRow] = (m_wgChoice[m_wgRow] + 1) % 5;
-        settingsChanged = true;
-    }
 
     if (m_wgChoice[0] != previousWorldSize)
-    {
         m_mapPreviewReady = false;
-        m_mapPreviewOffsetX = 0.0f;
-        m_mapPreviewOffsetY = 0.0f;
-        m_mapPreviewZoom = 1.0f;
-    }
-
-    if (settingsChanged)
-    {
-        m_mapPreviewSeed = PreviewSeed(m_wgChoice);
-        m_mapPreviewReady = false;
-    }
 
     if (select) m_worldGenStartRequested = true;
     if (back)   m_worldGenBackRequested = true;
@@ -394,10 +360,6 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
         zoomed = true;
     }
 
-    const float bounds = static_cast<float>(WorldResolution(m_wgChoice[0]));
-    m_mapPreviewOffsetX = std::clamp(m_mapPreviewOffsetX, -bounds, bounds);
-    m_mapPreviewOffsetY = std::clamp(m_mapPreviewOffsetY, -bounds, bounds);
-
     if (moved || zoomed)
         m_mapPreviewReady = false;
 }
@@ -412,7 +374,6 @@ void Ui::MapGenRender(Renderer& r)
         m_mapPreviewOffsetX = 0.0f;
         m_mapPreviewOffsetY = 0.0f;
         m_mapPreviewZoom = 1.0f;
-        m_mapPreviewSeed = PreviewSeed(m_wgChoice);
     }
 
     if (!m_mapPreviewReady)
@@ -435,22 +396,37 @@ void Ui::MapGenRender(Renderer& r)
         r.Blit(m_mapPreview, src, dst);
     }
 
+    // Overlay card for controls and context; intentionally overlaps the centered preview
+    const int cardW = 360;
+    const int cardH = 220;
+    const int cardX = cfg::WindowWidth - cardW - 28;
+    const int cardY = 32;
+
+    r.FillRect(cardX, cardY, cardW, cardH, Color::RGB(14, 12, 22));
+    r.DrawRect(cardX, cardY, cardW, cardH, BurntGold());
+    r.DrawRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8, Ember());
+
+    m_font.DrawText(r, cardX + 14, cardY + 14, "MAP GENERATION");
+    m_font.DrawText(r, cardX + 14, cardY + 46, "Pan: WASD or arrows");
+    m_font.DrawText(r, cardX + 14, cardY + 46 + m_font.GlyphH() + 6, "Zoom: mouse wheel");
+    m_font.DrawText(r, cardX + 14, cardY + cardH - 28, "ESC to return");
 }
 
 void Ui::GenerateMapPreview(Renderer& r)
 {
-    const int w = WorldResolution(m_wgChoice[0]);
-    const int h = WorldResolution(m_wgChoice[0]);
+    static const int WORLD_SIZE_TO_RESOLUTION[5] = { 256, 384, 512, 640, 768 };
+    const int w = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
+    const int h = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
 
-    if (m_mapPreviewSeed == 0u)
-        m_mapPreviewSeed = PreviewSeed(m_wgChoice);
+    std::random_device rd;
+    uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
 
     world::NoiseParams p;
-    p.scale = static_cast<float>(w) * 0.5f;
+    p.scale = 128.0f;
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;
-    p.seed = m_mapPreviewSeed;
+    p.seed = seed;
     p.offsetX = m_mapPreviewOffsetX;
     p.offsetY = m_mapPreviewOffsetY;
 
@@ -477,34 +453,5 @@ void Ui::GenerateMapPreview(Renderer& r)
 
     m_lastMapPreviewWorldSize = m_wgChoice[0];
     SetStatusMessage("Map preview generated");
-}
-
-void Ui::BeginMapLoading(const WorldGenSettings& settings)
-{
-    m_loadingSettings = settings;
-    m_loadingMessage = "Forging world...";
-}
-
-void Ui::MapLoadingRender(Renderer& r)
-{
-    r.FillRect(0, 0, cfg::WindowWidth, cfg::WindowHeight, Color::RGB(0, 0, 0));
-
-    const std::string title = "FORGING REALM";
-    const int titleX = (cfg::WindowWidth / 2) - static_cast<int>(title.size()) * m_font.GlyphW() / 2;
-    const int titleY = cfg::WindowHeight / 2 - m_font.GlyphH() * 2;
-    m_font.DrawText(r, titleX, titleY, title);
-
-    const int clampedWorldSize = std::clamp(m_loadingSettings.worldSize, 0, 4);
-    std::string detail = "World size: ";
-    detail += WG_VALUES[0][clampedWorldSize];
-
-    const int detailX = (cfg::WindowWidth / 2) - static_cast<int>(detail.size()) * m_font.GlyphW() / 2;
-    m_font.DrawText(r, detailX, titleY + m_font.GlyphH() * 2, detail);
-
-    if (!m_loadingMessage.empty())
-    {
-        const int msgX = (cfg::WindowWidth / 2) - static_cast<int>(m_loadingMessage.size()) * m_font.GlyphW() / 2;
-        m_font.DrawText(r, msgX, titleY + m_font.GlyphH() * 4, m_loadingMessage);
-    }
 }
 
