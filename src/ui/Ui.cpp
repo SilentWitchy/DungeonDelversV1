@@ -321,8 +321,34 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     return s;
 }
 
-void Ui::MapGenTick()
+void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed)
 {
+    const float moveStep = 48.0f;
+    bool moved = false;
+
+    if (leftPressed)
+    {
+        m_mapPreviewOffsetX -= moveStep;
+        moved = true;
+    }
+    if (rightPressed)
+    {
+        m_mapPreviewOffsetX += moveStep;
+        moved = true;
+    }
+    if (upPressed)
+    {
+        m_mapPreviewOffsetY -= moveStep;
+        moved = true;
+    }
+    if (downPressed)
+    {
+        m_mapPreviewOffsetY += moveStep;
+        moved = true;
+    }
+
+    if (moved)
+        m_mapPreviewReady = false;
 }
 
 void Ui::MapGenRender(Renderer& r)
@@ -330,7 +356,12 @@ void Ui::MapGenRender(Renderer& r)
     DrawCelestialBackdrop(r);
 
     if (m_lastMapPreviewWorldSize != m_wgChoice[0])
+    {
         m_mapPreviewReady = false;
+        m_hasMapPreviewSeed = false;
+        m_mapPreviewOffsetX = 0.0f;
+        m_mapPreviewOffsetY = 0.0f;
+    }
 
     if (!m_mapPreviewReady)
         GenerateMapPreview(r);
@@ -362,14 +393,20 @@ void Ui::GenerateMapPreview(Renderer& r)
     const int h = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
 
     std::random_device rd;
-    uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
+    if (!m_hasMapPreviewSeed)
+    {
+        m_mapPreviewSeed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
+        m_hasMapPreviewSeed = true;
+    }
 
     world::NoiseParams p;
-    p.scale = 128.0f;
+    p.scale = static_cast<float>(w) * 0.9f;
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;
-    p.seed = seed;
+    p.seed = m_mapPreviewSeed;
+    p.offsetX = m_mapPreviewOffsetX;
+    p.offsetY = m_mapPreviewOffsetY;
 
     auto noise = world::PerlinFbm2D(w, h, p);
     auto gray = world::NormalizeToU8(noise);
