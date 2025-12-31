@@ -321,10 +321,11 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     return s;
 }
 
-void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed)
+void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta)
 {
-    const float moveStep = 48.0f;
+    const float moveStep = 48.0f / std::max(1.0f, m_mapPreviewZoom);
     bool moved = false;
+    bool zoomed = false;
 
     if (leftPressed)
     {
@@ -347,7 +348,19 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
         moved = true;
     }
 
-    if (moved)
+    if (wheelDelta != 0)
+    {
+        const float zoomStep = 1.12f;
+        float factor = (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
+
+        for (int i = 1; i < std::abs(wheelDelta); ++i)
+            factor *= (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
+
+        m_mapPreviewZoom = std::clamp(m_mapPreviewZoom * factor, 0.25f, 6.0f);
+        zoomed = true;
+    }
+
+    if (moved || zoomed)
         m_mapPreviewReady = false;
 }
 
@@ -358,31 +371,45 @@ void Ui::MapGenRender(Renderer& r)
     if (m_lastMapPreviewWorldSize != m_wgChoice[0])
     {
         m_mapPreviewReady = false;
-        m_hasMapPreviewSeed = false;
         m_mapPreviewOffsetX = 0.0f;
         m_mapPreviewOffsetY = 0.0f;
+        m_mapPreviewZoom = 1.0f;
     }
 
     if (!m_mapPreviewReady)
         GenerateMapPreview(r);
 
-    const int boxX = 24;
-    const int boxY = 24;
-    const int boxW = 360;
-    const int boxH = 200;
+    const int previewSize = std::min(cfg::WindowHeight - 80, 680);
+    const int previewX = (cfg::WindowWidth - previewSize) / 2;
+    const int previewY = (cfg::WindowHeight - previewSize) / 2;
 
-    r.FillRect(boxX, boxY, boxW, boxH, Color::RGB(14, 12, 22));
-    r.DrawRect(boxX, boxY, boxW, boxH, BurntGold());
-    r.DrawRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8, Ember());
+    // Soft shadow and frame to give the preview a focal feel
+    r.FillRect(previewX + 14, previewY + 18, previewSize, previewSize, Color::RGB(6, 6, 12));
+    r.FillRect(previewX, previewY, previewSize, previewSize, Color::RGB(16, 12, 20));
+    r.DrawRect(previewX, previewY, previewSize, previewSize, Ember());
+    r.DrawRect(previewX + 8, previewY + 8, previewSize - 16, previewSize - 16, BurntGold());
 
     if (m_mapPreviewReady)
     {
         SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        const int previewSize = 640;
-        const int previewX = boxX + boxW + 32;
-        SDL_Rect dst{ previewX, 36, previewSize, previewSize }; // positioned to the right with a larger view
+        SDL_Rect dst{ previewX + 16, previewY + 16, previewSize - 32, previewSize - 32 };
         r.Blit(m_mapPreview, src, dst);
     }
+
+    // Overlay card for controls and context; intentionally overlaps the centered preview
+    const int cardW = 360;
+    const int cardH = 220;
+    const int cardX = cfg::WindowWidth - cardW - 28;
+    const int cardY = 32;
+
+    r.FillRect(cardX, cardY, cardW, cardH, Color::RGB(14, 12, 22));
+    r.DrawRect(cardX, cardY, cardW, cardH, BurntGold());
+    r.DrawRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8, Ember());
+
+    m_font.DrawText(r, cardX + 14, cardY + 14, "MAP GENERATION");
+    m_font.DrawText(r, cardX + 14, cardY + 46, "Pan: WASD or arrows");
+    m_font.DrawText(r, cardX + 14, cardY + 46 + m_font.GlyphH() + 6, "Zoom: mouse wheel");
+    m_font.DrawText(r, cardX + 14, cardY + cardH - 28, "ESC to return");
 }
 
 void Ui::GenerateMapPreview(Renderer& r)
@@ -392,18 +419,14 @@ void Ui::GenerateMapPreview(Renderer& r)
     const int h = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
 
     std::random_device rd;
-    if (!m_hasMapPreviewSeed)
-    {
-        m_mapPreviewSeed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
-        m_hasMapPreviewSeed = true;
-    }
+    uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
 
     world::NoiseParams p;
-    p.scale = static_cast<float>(w) * 0.9f;
+    p.scale = 128.0f;
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;
-    p.seed = m_mapPreviewSeed;
+    p.seed = seed;
     p.offsetX = m_mapPreviewOffsetX;
     p.offsetY = m_mapPreviewOffsetY;
 
