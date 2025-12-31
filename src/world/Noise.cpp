@@ -102,8 +102,8 @@ namespace world
 
                 for (int o = 0; o < p.octaves; ++o)
                 {
-                    const float nx = (static_cast<float>(x) / baseScale) * freq;
-                    const float ny = (static_cast<float>(y) / baseScale) * freq;
+                    const float nx = ((static_cast<float>(x) + p.offsetX) / baseScale) * freq;
+                    const float ny = ((static_cast<float>(y) + p.offsetY) / baseScale) * freq;
 
                     sum += Perlin2D(nx, ny, perm) * amp;
                     ampSum += amp;

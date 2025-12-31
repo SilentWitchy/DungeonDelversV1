@@ -26,7 +26,7 @@ public:
         bool selectPressed, bool backPressed);
     void WorldGenRender(Renderer& r);
 
-    void MapGenTick();
+    void MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed);
     void MapGenRender(Renderer& r);
 
     bool WorldGenStartRequested() const { return m_worldGenStartRequested; }
@@ -60,4 +60,8 @@ private:
     Texture m_mapPreview;
     bool m_mapPreviewReady = false;
     int m_lastMapPreviewWorldSize = -1;
+    uint32_t m_mapPreviewSeed = 0;
+    bool m_hasMapPreviewSeed = false;
+    float m_mapPreviewOffsetX = 0.0f;
+    float m_mapPreviewOffsetY = 0.0f;
 };
