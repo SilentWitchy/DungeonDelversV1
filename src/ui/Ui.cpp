@@ -404,8 +404,6 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
 
 void Ui::MapGenRender(Renderer& r)
 {
-    DrawCelestialBackdrop(r);
-
     if (m_lastMapPreviewWorldSize != m_wgChoice[0])
     {
         m_mapPreviewReady = false;
@@ -418,20 +416,15 @@ void Ui::MapGenRender(Renderer& r)
     if (!m_mapPreviewReady)
         GenerateMapPreview(r);
 
-    const int previewSize = std::min(cfg::WindowHeight - 80, 680);
-    const int previewX = (cfg::WindowWidth - previewSize) / 2;
-    const int previewY = (cfg::WindowHeight - previewSize) / 2;
-
-    // Soft shadow and frame to give the preview a focal feel
-    r.FillRect(previewX + 14, previewY + 18, previewSize, previewSize, Color::RGB(6, 6, 12));
-    r.FillRect(previewX, previewY, previewSize, previewSize, Color::RGB(16, 12, 20));
-    r.DrawRect(previewX, previewY, previewSize, previewSize, Ember());
-    r.DrawRect(previewX + 8, previewY + 8, previewSize - 16, previewSize - 16, BurntGold());
-
     if (m_mapPreviewReady)
     {
         SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        SDL_Rect dst{ previewX + 16, previewY + 16, previewSize - 32, previewSize - 32 };
+        SDL_Rect dst{
+            (cfg::WindowWidth - m_mapPreview.Width()) / 2,
+            (cfg::WindowHeight - m_mapPreview.Height()) / 2,
+            m_mapPreview.Width(),
+            m_mapPreview.Height()
+        };
         r.Blit(m_mapPreview, src, dst);
     }
 
@@ -439,14 +432,15 @@ void Ui::MapGenRender(Renderer& r)
 
 void Ui::GenerateMapPreview(Renderer& r)
 {
-    const int w = WorldResolution(m_wgChoice[0]);
-    const int h = WorldResolution(m_wgChoice[0]);
+    const int w = cfg::WindowWidth;
+    const int h = cfg::WindowHeight;
+    const int resolution = WorldResolution(m_wgChoice[0]);
 
     if (m_mapPreviewSeed == 0u)
         m_mapPreviewSeed = PreviewSeed(m_wgChoice);
 
     world::NoiseParams p;
-    p.scale = static_cast<float>(w) * 0.5f;
+    p.scale = static_cast<float>(resolution) * 2.0f;
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;
