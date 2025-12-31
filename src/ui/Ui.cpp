@@ -433,14 +433,15 @@ void Ui::MapGenRender(Renderer& r)
 
 void Ui::GenerateMapPreview(Renderer& r)
 {
-    const int w = WorldResolution(m_wgChoice[0]);
-    const int h = WorldResolution(m_wgChoice[0]);
+    const int w = cfg::WindowWidth;
+    const int h = cfg::WindowHeight;
+    const int resolution = WorldResolution(m_wgChoice[0]);
 
     if (m_mapPreviewSeed == 0u)
         m_mapPreviewSeed = PreviewSeed(m_wgChoice);
 
     world::NoiseParams p;
-    p.scale = static_cast<float>(w) * 0.5f;
+    p.scale = static_cast<float>(resolution) * 2.0f;
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;
