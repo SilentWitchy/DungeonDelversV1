@@ -195,7 +195,12 @@ int App::Run()
 
         else if (m_state == GameState::MapGenSelection)
         {
-            m_ui->MapGenTick();
+            const bool up = m_input->Down(SDLK_w) || m_input->Down(SDLK_UP);
+            const bool down = m_input->Down(SDLK_s) || m_input->Down(SDLK_DOWN);
+            const bool left = m_input->Down(SDLK_a) || m_input->Down(SDLK_LEFT);
+            const bool right = m_input->Down(SDLK_d) || m_input->Down(SDLK_RIGHT);
+
+            m_ui->MapGenTick(up, down, left, right, m_input->WheelY());
         }
 
         Render();

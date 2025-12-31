@@ -321,8 +321,47 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     return s;
 }
 
-void Ui::MapGenTick()
+void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta)
 {
+    const float moveStep = 48.0f / std::max(1.0f, m_mapPreviewZoom);
+    bool moved = false;
+    bool zoomed = false;
+
+    if (leftPressed)
+    {
+        m_mapPreviewOffsetX -= moveStep;
+        moved = true;
+    }
+    if (rightPressed)
+    {
+        m_mapPreviewOffsetX += moveStep;
+        moved = true;
+    }
+    if (upPressed)
+    {
+        m_mapPreviewOffsetY -= moveStep;
+        moved = true;
+    }
+    if (downPressed)
+    {
+        m_mapPreviewOffsetY += moveStep;
+        moved = true;
+    }
+
+    if (wheelDelta != 0)
+    {
+        const float zoomStep = 1.12f;
+        float factor = (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
+
+        for (int i = 1; i < std::abs(wheelDelta); ++i)
+            factor *= (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
+
+        m_mapPreviewZoom = std::clamp(m_mapPreviewZoom * factor, 0.25f, 6.0f);
+        zoomed = true;
+    }
+
+    if (moved || zoomed)
+        m_mapPreviewReady = false;
 }
 
 void Ui::MapGenRender(Renderer& r)
@@ -330,15 +369,21 @@ void Ui::MapGenRender(Renderer& r)
     DrawCelestialBackdrop(r);
 
     if (m_lastMapPreviewWorldSize != m_wgChoice[0])
+    {
         m_mapPreviewReady = false;
+        m_hasMapPreviewSeed = false;
+        m_mapPreviewOffsetX = 0.0f;
+        m_mapPreviewOffsetY = 0.0f;
+        m_mapPreviewZoom = 1.0f;
+    }
 
     if (!m_mapPreviewReady)
         GenerateMapPreview(r);
 
     const int boxX = 24;
     const int boxY = 24;
-    const int boxW = 280;
-    const int boxH = 180;
+    const int boxW = 360;
+    const int boxH = 200;
 
     r.FillRect(boxX, boxY, boxW, boxH, Color::RGB(14, 12, 22));
     r.DrawRect(boxX, boxY, boxW, boxH, BurntGold());
@@ -347,10 +392,17 @@ void Ui::MapGenRender(Renderer& r)
     const std::string title = "MAP GENERATION";
     m_font.DrawText(r, boxX + 12, boxY + 12, title);
 
+    const std::string panHint = "WASD / Arrows: pan preview";
+    const std::string zoomHint = "Mouse wheel: zoom";
+    m_font.DrawText(r, boxX + 12, boxY + 40, panHint);
+    m_font.DrawText(r, boxX + 12, boxY + 68, zoomHint);
+
     if (m_mapPreviewReady)
     {
         SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        SDL_Rect dst{ 340, 24, 512, 512 }; // position and size on screen
+        const int previewSize = 640;
+        const int previewX = boxX + boxW + 32;
+        SDL_Rect dst{ previewX, 36, previewSize, previewSize }; // positioned to the right with a larger view
         r.Blit(m_mapPreview, src, dst);
     }
 }
@@ -362,14 +414,20 @@ void Ui::GenerateMapPreview(Renderer& r)
     const int h = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
 
     std::random_device rd;
-    uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
+    if (!m_hasMapPreviewSeed)
+    {
+        m_mapPreviewSeed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
+        m_hasMapPreviewSeed = true;
+    }
 
     world::NoiseParams p;
-    p.scale = 128.0f;
+    p.scale = (static_cast<float>(w) * 0.9f) / std::max(0.0001f, m_mapPreviewZoom);
     p.octaves = 5;
     p.persistence = 0.5f;
     p.lacunarity = 2.0f;
-    p.seed = seed;
+    p.seed = m_mapPreviewSeed;
+    p.offsetX = m_mapPreviewOffsetX;
+    p.offsetY = m_mapPreviewOffsetY;
 
     auto noise = world::PerlinFbm2D(w, h, p);
     auto gray = world::NormalizeToU8(noise);

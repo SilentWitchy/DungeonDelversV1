@@ -12,6 +12,8 @@ namespace world
         float persistence = 0.5f; // Amplitude falloff per octave | Lower = smoother terrain Higher = rough, mountainous terrain | Smooth continents: 0.45 – 0.55 Rough / jagged worlds: 0.6 – 0.7 | Default 0.5
         float lacunarity = 2.0f;  // Frequency growth per octave | Default 2.0
         uint32_t seed = 1337;
+        float offsetX = 0.0f;
+        float offsetY = 0.0f;
     };
 
     // ---------------------------------------------------------------------

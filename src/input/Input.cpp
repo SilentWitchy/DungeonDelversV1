@@ -3,6 +3,7 @@
 void Input::BeginFrame()
 {
     m_pressedThisFrame.clear();
+    m_wheelY = 0;
 }
 
 void Input::ProcessEvent(const SDL_Event& e)
@@ -15,6 +16,10 @@ void Input::ProcessEvent(const SDL_Event& e)
     else if (e.type == SDL_KEYUP)
     {
         m_down[e.key.keysym.sym] = false;
+    }
+    else if (e.type == SDL_MOUSEWHEEL)
+    {
+        m_wheelY += e.wheel.y;
     }
 }
 
