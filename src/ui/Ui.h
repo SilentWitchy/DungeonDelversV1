@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 #include "world/WorldGenSettings.h"
 #include "gfx/Texture.h"
@@ -28,6 +29,9 @@ public:
 
     void MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta);
     void MapGenRender(Renderer& r);
+
+    void BeginMapLoading(const WorldGenSettings& settings);
+    void MapLoadingRender(Renderer& r);
 
     bool WorldGenStartRequested() const { return m_worldGenStartRequested; }
     bool WorldGenBackRequested() const { return m_worldGenBackRequested; }
@@ -63,4 +67,8 @@ private:
     float m_mapPreviewOffsetX = 0.0f;
     float m_mapPreviewOffsetY = 0.0f;
     float m_mapPreviewZoom = 1.0f;
+    uint32_t m_mapPreviewSeed = 0u;
+
+    WorldGenSettings m_loadingSettings{};
+    std::string m_loadingMessage;
 };
