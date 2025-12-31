@@ -1,6 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
+
+#include "gfx/Color.h"
 #include "world/WorldGenSettings.h"
 
 class Font;
