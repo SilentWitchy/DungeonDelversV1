@@ -394,8 +394,14 @@ void Ui::MapGenRender(Renderer& r)
 void Ui::GenerateMapPreview(Renderer& r)
 {
     static const int WORLD_SIZE_TO_RESOLUTION[5] = { 256, 384, 512, 640, 768 };
-    const int w = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
-    const int h = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
+    const int worldW = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
+    const int worldH = WORLD_SIZE_TO_RESOLUTION[m_wgChoice[0]];
+
+    const int viewW = std::max(1, std::min(worldW, static_cast<int>(std::lround(worldW / m_mapPreviewZoom))));
+    const int viewH = std::max(1, std::min(worldH, static_cast<int>(std::lround(worldH / m_mapPreviewZoom))));
+
+    m_mapPreviewOffsetX = std::clamp(m_mapPreviewOffsetX, 0.0f, static_cast<float>(worldW - viewW));
+    m_mapPreviewOffsetY = std::clamp(m_mapPreviewOffsetY, 0.0f, static_cast<float>(worldH - viewH));
 
     std::random_device rd;
     uint32_t seed = (uint32_t)rd() ^ ((uint32_t)rd() << 16);
@@ -409,14 +415,14 @@ void Ui::GenerateMapPreview(Renderer& r)
     p.offsetX = m_mapPreviewOffsetX;
     p.offsetY = m_mapPreviewOffsetY;
 
-    auto noise = world::PerlinFbm2D(w, h, p);
+    auto noise = world::PerlinFbm2D(viewW, viewH, p);
     auto gray = world::NormalizeToU8(noise);
-    auto rgba = world::GrayToRGBA(gray); // size = w*h*4
+    auto rgba = world::GrayToRGBA(gray); // size = viewW*viewH*4
 
     // NOTE: this requires Texture + Renderer support below (Step 4).
-    if (!m_mapPreviewReady || m_mapPreview.Width() != w || m_mapPreview.Height() != h)
+    if (!m_mapPreviewReady || m_mapPreview.Width() != viewW || m_mapPreview.Height() != viewH)
     {
-        if (!m_mapPreview.CreateRGBAStreaming(r.Raw(), w, h))
+        if (!m_mapPreview.CreateRGBAStreaming(r.Raw(), viewW, viewH))
         {
             SetStatusMessage("Failed to create map preview texture");
             return;
@@ -424,7 +430,7 @@ void Ui::GenerateMapPreview(Renderer& r)
         m_mapPreviewReady = true;
     }
 
-    if (!m_mapPreview.UpdateRGBA(rgba.data(), w * 4))
+    if (!m_mapPreview.UpdateRGBA(rgba.data(), viewW * 4))
     {
         SetStatusMessage("Failed to upload map preview pixels");
         return;
