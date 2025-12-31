@@ -199,8 +199,25 @@ int App::Run()
             const bool down = m_input->Down(SDLK_s) || m_input->Down(SDLK_DOWN);
             const bool left = m_input->Down(SDLK_a) || m_input->Down(SDLK_LEFT);
             const bool right = m_input->Down(SDLK_d) || m_input->Down(SDLK_RIGHT);
+            const bool confirm = m_input->PressedOnce(SDLK_RETURN) || m_input->PressedOnce(SDLK_KP_ENTER);
+            const bool back = m_input->PressedOnce(SDLK_ESCAPE);
 
             m_ui->MapGenTick(up, down, left, right, m_input->WheelY());
+
+            if (confirm)
+            {
+                m_state = GameState::MapLoading;
+                m_ui->BeginMapLoading(m_pendingSettings);
+            }
+            else if (back)
+            {
+                m_state = GameState::WorldGen;
+            }
+        }
+
+        else if (m_state == GameState::MapLoading)
+        {
+            // Future loading logic can live here; currently passive
         }
 
         Render();
@@ -228,6 +245,10 @@ void App::Render()
     else if (m_state == GameState::MapGenSelection)
     {
         m_ui->MapGenRender(*m_renderer);
+    }
+    else if (m_state == GameState::MapLoading)
+    {
+        m_ui->MapLoadingRender(*m_renderer);
     }
 
     m_renderer->Present();
