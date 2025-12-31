@@ -404,6 +404,8 @@ void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rig
 
 void Ui::MapGenRender(Renderer& r)
 {
+    r.FillRect(0, 0, cfg::WindowWidth, cfg::WindowHeight, Color::RGB(0, 0, 0));
+
     if (m_lastMapPreviewWorldSize != m_wgChoice[0])
     {
         m_mapPreviewReady = false;
@@ -416,15 +418,14 @@ void Ui::MapGenRender(Renderer& r)
     if (!m_mapPreviewReady)
         GenerateMapPreview(r);
 
+    const int previewSize = std::min(cfg::WindowHeight - 80, 680);
+    const int previewX = (cfg::WindowWidth - previewSize) / 2;
+    const int previewY = (cfg::WindowHeight - previewSize) / 2;
+
     if (m_mapPreviewReady)
     {
         SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        SDL_Rect dst{
-            (cfg::WindowWidth - m_mapPreview.Width()) / 2,
-            (cfg::WindowHeight - m_mapPreview.Height()) / 2,
-            m_mapPreview.Width(),
-            m_mapPreview.Height()
-        };
+        SDL_Rect dst{ previewX, previewY, previewSize, previewSize };
         r.Blit(m_mapPreview, src, dst);
     }
 
