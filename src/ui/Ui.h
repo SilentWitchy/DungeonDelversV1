@@ -1,8 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
+
+#include "gfx/Color.h"
 #include "world/WorldGenSettings.h"
-#include "gfx/Texture.h"
 
 class Font;
 class Renderer;
@@ -27,8 +29,18 @@ public:
         bool selectPressed, bool backPressed);
     void WorldGenRender(Renderer& r);
 
-    void MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta);
+    void MapGenTick(
+        bool upPressed,
+        bool downPressed,
+        bool leftPressed,
+        bool rightPressed,
+        bool confirmPressed,
+        bool backPressed,
+        int  wheelDelta);
     void MapGenRender(Renderer& r);
+    bool MapSelectionComplete() const { return m_spawnConfirmed; }
+    bool MapGenBackRequested() const { return m_mapGenBackRequested; }
+    void ClearMapSelectionFlags() { m_spawnConfirmed = false; m_mapGenBackRequested = false; }
 
     void BeginMapLoading(const WorldGenSettings& settings);
     void MapLoadingRender(Renderer& r);
@@ -60,14 +72,36 @@ private:
 
     std::string m_statusMessage;
 
-    void GenerateMapPreview(Renderer& r);
-    Texture m_mapPreview;
-    bool m_mapPreviewReady = false;
     int m_lastMapPreviewWorldSize = -1;
-    float m_mapPreviewOffsetX = 0.0f;
-    float m_mapPreviewOffsetY = 0.0f;
-    float m_mapPreviewZoom = 1.0f;
     uint32_t m_mapPreviewSeed = 0u;
+
+    enum class MapViewStage
+    {
+        Region,
+        Local
+    };
+
+    int RegionResolution() const;
+    void BuildRegionBiomeSummaries();
+    void GenerateLocalTerrain(int regionX, int regionY);
+    int SampleBiome(uint8_t v) const;
+    Color BiomeColor(int biome) const;
+
+    MapViewStage m_mapViewStage = MapViewStage::Region;
+    bool m_regionBiomesReady = false;
+    int m_regionResolution = 0;
+    std::vector<int> m_regionBiomeSummary; // size = res * res
+    std::vector<int> m_localBlockBiomes;   // size = (res*16)^2 for region-level aggregation
+    int m_selectedRegionX = 0;
+    int m_selectedRegionY = 0;
+
+    static constexpr int LOCAL_BLOCKS_PER_REGION = 16;
+    static constexpr int TERRAIN_TILES_PER_BLOCK = 48;
+    std::vector<int> m_localTerrainBiomes; // size = (LOCAL_BLOCKS_PER_REGION*TERRAIN_TILES_PER_BLOCK)^2 for selected region
+    int m_localSelectionBlockX = 0;
+    int m_localSelectionBlockY = 0;
+    bool m_spawnConfirmed = false;
+    bool m_mapGenBackRequested = false;
 
     WorldGenSettings m_loadingSettings{};
     std::string m_loadingMessage;
