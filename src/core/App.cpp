@@ -202,15 +202,17 @@ int App::Run()
             const bool confirm = m_input->PressedOnce(SDLK_RETURN) || m_input->PressedOnce(SDLK_KP_ENTER);
             const bool back = m_input->PressedOnce(SDLK_ESCAPE);
 
-            m_ui->MapGenTick(up, down, left, right, m_input->WheelY());
+            m_ui->MapGenTick(up, down, left, right, confirm, back, m_input->WheelY());
 
-            if (confirm)
+            if (m_ui->MapSelectionComplete())
             {
                 m_state = GameState::MapLoading;
                 m_ui->BeginMapLoading(m_pendingSettings);
+                m_ui->ClearMapSelectionFlags();
             }
-            else if (back)
+            else if (m_ui->MapGenBackRequested())
             {
+                m_ui->ClearMapSelectionFlags();
                 m_state = GameState::WorldGen;
             }
         }

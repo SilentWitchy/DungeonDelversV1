@@ -3,11 +3,9 @@
 #include "gfx/Renderer.h"
 #include "gfx/Color.h"
 #include "core/Config.h"
-#include "gfx/Texture.h"
 #include "world/Noise.h"
 
 #include <cstdint>
-#include <SDL.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -20,7 +18,7 @@ namespace
     Color Ember()     { return Color::RGB(122, 82, 44); }
     Color DeepNight() { return Color::RGB(8, 10, 18); }
 
-    const int WORLD_SIZE_TO_RESOLUTION[5] = { 256, 384, 512, 640, 768 };
+    const int WORLD_SIZE_TO_RESOLUTION[5] = { 17, 33, 65, 129, 257 };
 
     uint32_t PreviewSeed(const int wgChoice[7])
     {
@@ -279,16 +277,16 @@ void Ui::WorldGenTick(bool up, bool down, bool left, bool right, bool select, bo
 
     if (m_wgChoice[0] != previousWorldSize)
     {
-        m_mapPreviewReady = false;
-        m_mapPreviewOffsetX = 0.0f;
-        m_mapPreviewOffsetY = 0.0f;
-        m_mapPreviewZoom = 1.0f;
+        m_regionBiomesReady = false;
+        m_mapViewStage = MapViewStage::Region;
+        m_selectedRegionX = 0;
+        m_selectedRegionY = 0;
     }
 
     if (settingsChanged)
     {
         m_mapPreviewSeed = PreviewSeed(m_wgChoice);
-        m_mapPreviewReady = false;
+        m_regionBiomesReady = false;
     }
 
     if (select) m_worldGenStartRequested = true;
@@ -355,128 +353,233 @@ WorldGenSettings Ui::GetWorldGenSettings() const
     return s;
 }
 
-void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, int wheelDelta)
+int Ui::RegionResolution() const
 {
-    const float moveStep = 48.0f / std::max(1.0f, m_mapPreviewZoom);
-    bool moved = false;
-    bool zoomed = false;
-
-    if (leftPressed)
-    {
-        m_mapPreviewOffsetX -= moveStep;
-        moved = true;
-    }
-    if (rightPressed)
-    {
-        m_mapPreviewOffsetX += moveStep;
-        moved = true;
-    }
-    if (upPressed)
-    {
-        m_mapPreviewOffsetY -= moveStep;
-        moved = true;
-    }
-    if (downPressed)
-    {
-        m_mapPreviewOffsetY += moveStep;
-        moved = true;
-    }
-
-    if (wheelDelta != 0)
-    {
-        const float zoomStep = 1.12f;
-        float factor = (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
-
-        for (int i = 1; i < std::abs(wheelDelta); ++i)
-            factor *= (wheelDelta > 0) ? zoomStep : (1.0f / zoomStep);
-
-        m_mapPreviewZoom = std::clamp(m_mapPreviewZoom * factor, 0.25f, 6.0f);
-        zoomed = true;
-    }
-
-    const float bounds = static_cast<float>(WorldResolution(m_wgChoice[0]));
-    m_mapPreviewOffsetX = std::clamp(m_mapPreviewOffsetX, -bounds, bounds);
-    m_mapPreviewOffsetY = std::clamp(m_mapPreviewOffsetY, -bounds, bounds);
-
-    if (moved || zoomed)
-        m_mapPreviewReady = false;
+    return WorldResolution(m_wgChoice[0]);
 }
 
-void Ui::MapGenRender(Renderer& r)
+int Ui::SampleBiome(uint8_t v) const
 {
-    DrawCelestialBackdrop(r);
-
-    if (m_lastMapPreviewWorldSize != m_wgChoice[0])
-    {
-        m_mapPreviewReady = false;
-        m_mapPreviewOffsetX = 0.0f;
-        m_mapPreviewOffsetY = 0.0f;
-        m_mapPreviewZoom = 1.0f;
-        m_mapPreviewSeed = PreviewSeed(m_wgChoice);
-    }
-
-    if (!m_mapPreviewReady)
-        GenerateMapPreview(r);
-
-    const int previewSize = std::min(cfg::WindowHeight - 80, 680);
-    const int previewX = (cfg::WindowWidth - previewSize) / 2;
-    const int previewY = (cfg::WindowHeight - previewSize) / 2;
-
-    // Soft shadow and frame to give the preview a focal feel
-    r.FillRect(previewX + 14, previewY + 18, previewSize, previewSize, Color::RGB(6, 6, 12));
-    r.FillRect(previewX, previewY, previewSize, previewSize, Color::RGB(16, 12, 20));
-    r.DrawRect(previewX, previewY, previewSize, previewSize, Ember());
-    r.DrawRect(previewX + 8, previewY + 8, previewSize - 16, previewSize - 16, BurntGold());
-
-    if (m_mapPreviewReady)
-    {
-        SDL_Rect src{ 0, 0, m_mapPreview.Width(), m_mapPreview.Height() };
-        SDL_Rect dst{ previewX + 16, previewY + 16, previewSize - 32, previewSize - 32 };
-        r.Blit(m_mapPreview, src, dst);
-    }
-
+    if (v < 64) return 0;      // ocean
+    if (v < 128) return 1;     // plains
+    if (v < 192) return 2;     // forest
+    return 3;                  // mountains
 }
 
-void Ui::GenerateMapPreview(Renderer& r)
+Color Ui::BiomeColor(int biome) const
 {
-    const int w = WorldResolution(m_wgChoice[0]);
-    const int h = WorldResolution(m_wgChoice[0]);
+    switch (biome)
+    {
+    case 0: return Color::RGB(12, 42, 96);
+    case 1: return Color::RGB(78, 122, 64);
+    case 2: return Color::RGB(36, 92, 44);
+    case 3: return Color::RGB(120, 120, 120);
+    default: return Color::RGB(0, 0, 0);
+    }
+}
+
+void Ui::BuildRegionBiomeSummaries()
+{
+    const int res = RegionResolution();
+    if (m_regionBiomesReady && res == m_regionResolution && m_lastMapPreviewWorldSize == m_wgChoice[0])
+        return;
+
+    m_regionResolution = res;
+    m_regionBiomeSummary.assign(res * res, 0);
+    m_localBlockBiomes.assign(res * res * LOCAL_BLOCKS_PER_REGION * LOCAL_BLOCKS_PER_REGION, 0);
 
     if (m_mapPreviewSeed == 0u)
         m_mapPreviewSeed = PreviewSeed(m_wgChoice);
 
-    world::NoiseParams p;
-    p.scale = static_cast<float>(w) * 0.5f;
-    p.octaves = 5;
-    p.persistence = 0.5f;
-    p.lacunarity = 2.0f;
-    p.seed = m_mapPreviewSeed;
-    p.offsetX = m_mapPreviewOffsetX;
-    p.offsetY = m_mapPreviewOffsetY;
+    const int blockGridSize = res * LOCAL_BLOCKS_PER_REGION;
+    world::NoiseParams params;
+    params.scale = static_cast<float>(blockGridSize) * 1.5f;
+    params.octaves = 5;
+    params.persistence = 0.5f;
+    params.lacunarity = 2.0f;
+    params.seed = m_mapPreviewSeed;
+    params.offsetX = 0.0f;
+    params.offsetY = 0.0f;
 
-    auto noise = world::PerlinFbm2D(w, h, p);
-    auto gray = world::NormalizeToU8(noise);
-    auto rgba = world::GrayToRGBA(gray); // size = w*h*4
+    auto blockNoise = world::NormalizeToU8(world::PerlinFbm2D(blockGridSize, blockGridSize, params));
 
-    // NOTE: this requires Texture + Renderer support below (Step 4).
-    if (!m_mapPreviewReady || m_mapPreview.Width() != w || m_mapPreview.Height() != h)
+    for (int y = 0; y < blockGridSize; ++y)
     {
-        if (!m_mapPreview.CreateRGBAStreaming(r.Raw(), w, h))
+        for (int x = 0; x < blockGridSize; ++x)
         {
-            SetStatusMessage("Failed to create map preview texture");
-            return;
+            const int biome = SampleBiome(blockNoise[y * blockGridSize + x]);
+            m_localBlockBiomes[y * blockGridSize + x] = biome;
         }
-        m_mapPreviewReady = true;
     }
 
-    if (!m_mapPreview.UpdateRGBA(rgba.data(), w * 4))
+    for (int regionY = 0; regionY < res; ++regionY)
     {
-        SetStatusMessage("Failed to upload map preview pixels");
-        return;
+        for (int regionX = 0; regionX < res; ++regionX)
+        {
+            int counts[4] = { 0, 0, 0, 0 };
+            for (int by = 0; by < LOCAL_BLOCKS_PER_REGION; ++by)
+            {
+                for (int bx = 0; bx < LOCAL_BLOCKS_PER_REGION; ++bx)
+                {
+                    const int gx = regionX * LOCAL_BLOCKS_PER_REGION + bx;
+                    const int gy = regionY * LOCAL_BLOCKS_PER_REGION + by;
+                    const int biome = m_localBlockBiomes[gy * blockGridSize + gx];
+                    if (biome >= 0 && biome < 4)
+                        ++counts[biome];
+                }
+            }
+
+            int bestBiome = 0;
+            int bestCount = counts[0];
+            for (int i = 1; i < 4; ++i)
+            {
+                if (counts[i] > bestCount)
+                {
+                    bestCount = counts[i];
+                    bestBiome = i;
+                }
+            }
+
+            m_regionBiomeSummary[regionY * res + regionX] = bestBiome;
+        }
     }
 
+    m_regionBiomesReady = true;
     m_lastMapPreviewWorldSize = m_wgChoice[0];
-    SetStatusMessage("Map preview generated");
+    m_mapViewStage = MapViewStage::Region;
+    m_selectedRegionX = std::clamp(m_selectedRegionX, 0, res - 1);
+    m_selectedRegionY = std::clamp(m_selectedRegionY, 0, res - 1);
+    m_spawnConfirmed = false;
+}
+
+void Ui::GenerateLocalTerrain(int regionX, int regionY)
+{
+    const int tilesPerSide = LOCAL_BLOCKS_PER_REGION * TERRAIN_TILES_PER_BLOCK;
+
+    world::NoiseParams params;
+    params.scale = 96.0f;
+    params.octaves = 6;
+    params.persistence = 0.5f;
+    params.lacunarity = 2.0f;
+    params.seed = m_mapPreviewSeed ^ static_cast<uint32_t>(regionX * 73856093) ^ static_cast<uint32_t>(regionY * 19349663);
+    params.offsetX = 0.0f;
+    params.offsetY = 0.0f;
+
+    auto terrainNoise = world::NormalizeToU8(world::PerlinFbm2D(tilesPerSide, tilesPerSide, params));
+
+    m_localTerrainBiomes.assign(tilesPerSide * tilesPerSide, 0);
+    for (int i = 0; i < tilesPerSide * tilesPerSide; ++i)
+        m_localTerrainBiomes[i] = SampleBiome(terrainNoise[i]);
+
+    m_localSelectionBlockX = 0;
+    m_localSelectionBlockY = 0;
+    m_mapViewStage = MapViewStage::Local;
+    m_spawnConfirmed = false;
+}
+
+void Ui::MapGenTick(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed, bool confirmPressed, bool backPressed, int /*wheelDelta*/)
+{
+    if (m_lastMapPreviewWorldSize != m_wgChoice[0])
+    {
+        m_regionBiomesReady = false;
+        m_mapViewStage = MapViewStage::Region;
+        m_selectedRegionX = 0;
+        m_selectedRegionY = 0;
+    }
+
+    BuildRegionBiomeSummaries();
+
+    if (m_mapViewStage == MapViewStage::Region)
+    {
+        if (upPressed)    m_selectedRegionY = std::max(0, m_selectedRegionY - 1);
+        if (downPressed)  m_selectedRegionY = std::min(RegionResolution() - 1, m_selectedRegionY + 1);
+        if (leftPressed)  m_selectedRegionX = std::max(0, m_selectedRegionX - 1);
+        if (rightPressed) m_selectedRegionX = std::min(RegionResolution() - 1, m_selectedRegionX + 1);
+
+        if (confirmPressed)
+        {
+            GenerateLocalTerrain(m_selectedRegionX, m_selectedRegionY);
+        }
+
+        if (backPressed)
+            m_mapGenBackRequested = true;
+    }
+    else if (m_mapViewStage == MapViewStage::Local)
+    {
+        const int maxBlock = LOCAL_BLOCKS_PER_REGION - 1;
+        if (upPressed)    m_localSelectionBlockY = std::max(0, m_localSelectionBlockY - 1);
+        if (downPressed)  m_localSelectionBlockY = std::min(maxBlock - 3, m_localSelectionBlockY + 1);
+        if (leftPressed)  m_localSelectionBlockX = std::max(0, m_localSelectionBlockX - 1);
+        if (rightPressed) m_localSelectionBlockX = std::min(maxBlock - 3, m_localSelectionBlockX + 1);
+
+        if (confirmPressed)
+            m_spawnConfirmed = true;
+
+        if (backPressed)
+        {
+            m_mapViewStage = MapViewStage::Region;
+            m_spawnConfirmed = false;
+        }
+    }
+}
+
+void Ui::MapGenRender(Renderer& r)
+{
+    r.FillRect(0, 0, cfg::WindowWidth, cfg::WindowHeight, Color::RGB(0, 0, 0));
+
+    BuildRegionBiomeSummaries();
+
+    if (m_mapViewStage == MapViewStage::Region)
+    {
+        const int res = RegionResolution();
+        const int availableW = cfg::WindowWidth - 120;
+        const int availableH = cfg::WindowHeight - 140;
+        const int cell = std::max(1, std::min(availableW / res, availableH / res));
+        const int startX = (cfg::WindowWidth - cell * res) / 2;
+        const int startY = (cfg::WindowHeight - cell * res) / 2;
+
+        for (int y = 0; y < res; ++y)
+        {
+            for (int x = 0; x < res; ++x)
+            {
+                const int biome = m_regionBiomeSummary[y * res + x];
+                r.FillRect(startX + x * cell, startY + y * cell, cell, cell, BiomeColor(biome));
+            }
+        }
+
+        r.DrawRect(startX + m_selectedRegionX * cell, startY + m_selectedRegionY * cell, cell, cell, BurntGold());
+
+        const std::string hint = "Select a region to inspect local terrain (Enter) or press ESC to return.";
+        const int textX = (cfg::WindowWidth / 2) - static_cast<int>(hint.size()) * m_font.GlyphW() / 2;
+        m_font.DrawText(r, textX, startY - m_font.GlyphH() * 2, hint);
+    }
+    else if (m_mapViewStage == MapViewStage::Local)
+    {
+        const int tilesPerSide = LOCAL_BLOCKS_PER_REGION * TERRAIN_TILES_PER_BLOCK;
+        const int availableW = cfg::WindowWidth - 80;
+        const int availableH = cfg::WindowHeight - 120;
+        const int cell = std::max(1, std::min(availableW / tilesPerSide, availableH / tilesPerSide));
+        const int startX = (cfg::WindowWidth - cell * tilesPerSide) / 2;
+        const int startY = (cfg::WindowHeight - cell * tilesPerSide) / 2;
+
+        for (int y = 0; y < tilesPerSide; ++y)
+        {
+            for (int x = 0; x < tilesPerSide; ++x)
+            {
+                const int biome = m_localTerrainBiomes[y * tilesPerSide + x];
+                r.FillRect(startX + x * cell, startY + y * cell, cell, cell, BiomeColor(biome));
+            }
+        }
+
+        const int selectionTileX = m_localSelectionBlockX * TERRAIN_TILES_PER_BLOCK;
+        const int selectionTileY = m_localSelectionBlockY * TERRAIN_TILES_PER_BLOCK;
+        const int selectionTiles = TERRAIN_TILES_PER_BLOCK * 4;
+        r.DrawRect(startX + selectionTileX * cell, startY + selectionTileY * cell, selectionTiles * cell, selectionTiles * cell, BurntGold());
+
+        const std::string hint = "Move to choose a 4x4 local block spawn area, Enter to confirm, ESC to pick another region.";
+        const int textX = (cfg::WindowWidth / 2) - static_cast<int>(hint.size()) * m_font.GlyphW() / 2;
+        m_font.DrawText(r, textX, startY - m_font.GlyphH() * 2, hint);
+    }
 }
 
 void Ui::BeginMapLoading(const WorldGenSettings& settings)
