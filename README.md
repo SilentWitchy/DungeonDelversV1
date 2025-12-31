@@ -1,4 +1,7 @@
 # DungeonCore (C++ / SDL2)
+Clipped: clipped perlin frame
+large window tied to world size settings
+No small secondary window
 
 A minimal-dependency foundation for a Dwarf Fortress–style game where the player is a sentient Dungeon Core.
 
